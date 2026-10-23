@@ -36,7 +36,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 ### 🪟 Install on Windows
 
-1. Open this repository’s **Releases** page and download `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/latest).
+1. Open this repository’s **Releases** page and download `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.3.0).
 2. Run the installer and accept the Windows Administrator/UAC request. The installer offers an installation directory and shortcuts.
 3. Open **Azadi Connect → Add profile**. Import your configuration, or paste a share link.
 4. Choose **Selected applications** and add the actual `.exe` paths, or choose **Entire system**.
@@ -153,7 +153,7 @@ The initial implementation is developed in separate commits for the protocol cor
 
 ### 🪟 روش نصب و استفاده
 
-۱. از بخش **Releases** فایل `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/latest) دریافت کن.
+۱. از بخش **Releases** فایل `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.3.0) دریافت کن.
 
 ۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد.
 
