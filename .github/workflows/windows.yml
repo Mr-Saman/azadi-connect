@@ -1,0 +1,84 @@
+name: Windows build and release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Unit tests
+        run: npm test
+      - name: Bilingual UI checks with the runner's Chrome
+        env:
+          AZADI_CHROMIUM: 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+        run: npm run test:ui
+      - name: Verify and stage pinned engine
+        run: npm run assets
+      - name: Compile native guardian with installed Microsoft compiler
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $install = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $install) { throw 'C++ Build Tools not found' }
+          $vcvars = Join-Path $install 'VC\Auxiliary\Build\vcvars64.bat'
+          $script = Join-Path $env:RUNNER_TEMP 'azadi-build-guardian.cmd'
+          "@call `"$vcvars`"`r`n@npm run build:guardian`r`n@exit /b %errorlevel%" | Set-Content -Path $script -Encoding ascii
+          & cmd.exe /d /s /c "`"$script`""
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check 22 generated protocol and route configurations
+        run: npm run check:engine
+      - name: Native guardian lifecycle checks
+        run: node scripts/guardian-smoke.cjs
+      - name: Build Windows x64 installer
+        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Verify packaged manifest and integrity
+        run: node scripts/verify-package.mjs
+      - name: Download exact upstream source for GPL availability
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://github.com/SagerNet/sing-box/archive/refs/tags/v1.14.3.tar.gz' -OutFile 'dist/sing-box-1.14.3-source.tar.gz'
+      - name: Create checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -File | Where-Object { $_.Extension -eq '.exe' -or $_.Name.EndsWith('.tar.gz') } | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)"
+          } | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Azadi-Connect-Windows-x64
+          path: |
+            dist/*.exe
+            dist/SHA256SUMS.txt
+            dist/*-source.tar.gz
+          if-no-files-found: error
+      - name: Attach assets to the published matching release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          if ($env:RELEASE_TAG -ne "v$version") { throw 'Release tag must match package.json' }
+          gh release upload $env:RELEASE_TAG dist/*.exe dist/SHA256SUMS.txt dist/*-source.tar.gz --repo $env:GITHUB_REPOSITORY
