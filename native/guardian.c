@@ -13,6 +13,12 @@
 #include <wchar.h>
 #include <stdio.h>
 
+static int failed(const char *stage, int code) {
+    fprintf(stderr, "guardian: %s failed (Windows error %lu)\n", stage, GetLastError());
+    fflush(stderr);
+    return code;
+}
+
 int wmain(int argc, wchar_t **argv) {
     if (argc != 3) return 64;
     HANDLE parentInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -23,10 +29,10 @@ int wmain(int argc, wchar_t **argv) {
     if (console) ShowWindow(console, SW_HIDE);
     SetConsoleCtrlHandler(NULL, TRUE);
     HANDLE job = CreateJobObjectW(NULL, NULL);
-    if (!job) return 65;
+    if (!job) return failed("CreateJobObject", 65);
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {0};
     limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    if (!SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof(limits))) { CloseHandle(job); return 66; }
+    if (!SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof(limits))) { int code=failed("SetInformationJobObject",66); CloseHandle(job); return code; }
     size_t size = wcslen(argv[1]) + wcslen(argv[2]) + 32;
     wchar_t *command = (wchar_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size * sizeof(wchar_t));
     if (!command) { CloseHandle(job); return 67; }
@@ -38,9 +44,10 @@ int wmain(int argc, wchar_t **argv) {
     BOOL created = CreateProcessW(argv[1], command, NULL, NULL, TRUE,
         CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED, NULL, NULL, &startup, &child);
     HeapFree(GetProcessHeap(), 0, command);
-    if (!created) { CloseHandle(job); return 68; }
+    if (!created) { int code=failed("CreateProcess",68); CloseHandle(job); return code; }
     if (!AssignProcessToJobObject(job, child.hProcess)) {
-        TerminateProcess(child.hProcess, 69); CloseHandle(child.hThread); CloseHandle(child.hProcess); CloseHandle(job); return 69;
+        int code=failed("AssignProcessToJobObject",69);
+        TerminateProcess(child.hProcess, 69); CloseHandle(child.hThread); CloseHandle(child.hProcess); CloseHandle(job); return code;
     }
     ResumeThread(child.hThread); CloseHandle(child.hThread);
     for (;;) {
