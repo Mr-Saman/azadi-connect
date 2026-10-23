@@ -15,3 +15,7 @@ guardian.obj
 *.key
 *.pem
 !tests/fixtures/ca.pem
+
+network-lock.obj
+network-probe.obj
+test-output/
