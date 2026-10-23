@@ -5,6 +5,7 @@ Azadi Connect application source is GPL-3.0-or-later. Its generated application 
 | Component | Version | License / source |
 | --- | --- | --- |
 | sing-box | 1.14.3, commit `7054cac5124465ffdb145870d7c01885566711b1` | GPL-3.0-or-later and upstream name/association notice; [pinned source](https://github.com/SagerNet/sing-box/tree/v1.14.3), [notice](licenses/sing-box-notice.txt) |
+| Wintun (embedded by the upstream Windows core) | 0.14.1 | Unmodified vendor binary under the [Wintun Prebuilt Binaries License](licenses/Wintun-LICENSE.txt); MIT wrapper in sing-tun. [Official distribution](https://www.wintun.net/builds/wintun-0.14.1.zip). No affiliation or endorsement is implied. |
 | Electron | 45.0.0 | MIT and Chromium/third-party notices distributed with Electron; [source](https://github.com/electron/electron/tree/v45.0.0) |
 | Vazir | 30.1.0 | SIL Open Font License 1.1; [bundled license](licenses/Vazir-OFL.txt), [original font distribution](https://github.com/rastikerdar/vazir-font/tree/v30.1.0) |
 | Inter | Variable font, upstream distribution | SIL Open Font License 1.1; [bundled license](licenses/Inter-OFL.txt), [source](https://github.com/rsms/inter) |
@@ -20,3 +21,5 @@ Archive pin: `sing-box-1.14.3-windows-amd64.zip` → SHA-256 `d8b86ef58936dba923
 The native guardian is Azadi Connect code and is included in this repository under GPL-3.0-or-later.
 
 فونت‌ها، موتور شبکه و Electron متعلق به سازندگان مستقل خود هستند. عبارت «تولیدشده با ChatGPT» دربارهٔ کد برنامه و مستندات این مخزن است؛ حقوق و مجوز وابستگی‌های بالا محفوظ است.
+
+The v0.1.0 release also provides `Wintun-LICENSE.txt` beside the installer as accompanying third-party redistribution terms. Future source builds include this license in the application package as well.
