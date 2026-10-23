@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.cache/
+resources/core/*
+!resources/core/.gitkeep
+*.log
+*.vault
+runtime/
+.env*
+!examples/

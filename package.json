@@ -1,0 +1,51 @@
+{
+  "name": "azadi-connect",
+  "productName": "Azadi Connect",
+  "version": "0.1.0",
+  "description": "Bilingual Windows VPN client with application routing. For Iran ❤️",
+  "author": "Saman Salehi and the Azadi Connect contributors",
+  "license": "GPL-3.0-or-later",
+  "main": "app/main.cjs",
+  "private": true,
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "assets": "node scripts/assets.mjs",
+    "check:engine": "node scripts/check-engine.mjs",
+    "build:win": "npm run assets && electron-builder --win nsis --x64 --publish never",
+    "build:dir": "electron-builder --win dir --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
+    "fflate": "0.8.2"
+  },
+  "build": {
+    "appId": "org.azadi.connect",
+    "productName": "Azadi Connect",
+    "copyright": "Copyright © 2026 Azadi Connect contributors",
+    "asar": true,
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["app/**/*", "ui/**/*", "package.json", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+    "extraResources": [{ "from": "resources/core", "to": "core", "filter": ["**/*"] }],
+    "artifactName": "Azadi-Connect-${version}-Windows-x64-Setup.${ext}",
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["en_US", "fa_IR"],
+      "language": "1033",
+      "license": "LICENSE"
+    }
+  }
+}
