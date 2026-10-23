@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#58e2bb"/><stop offset="1" stop-color="#77b8ff"/></linearGradient></defs><rect x="8" y="8" width="240" height="240" rx="65" fill="#101c2e"/><path d="m55 187 73-126 73 126M91 132h74M81 187l47-28 47 28" fill="none" stroke="url(#g)" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 256 256" role="img" aria-label="Azadi Connect">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17283f"/><stop offset="1" stop-color="#0a1324"/></linearGradient>
+    <linearGradient id="route" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#62efc5"/><stop offset=".6" stop-color="#56d6d7"/><stop offset="1" stop-color="#87b8ff"/></linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="62" fill="url(#tile)"/>
+  <rect x="9" y="9" width="238" height="238" rx="61" fill="none" stroke="#7bdedb" stroke-opacity=".18" stroke-width="2"/>
+  <path d="m62 187 60-115q6-12 12 0l60 115M86 141h67" fill="none" stroke="url(#route)" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M128 187h35" fill="none" stroke="#88baff" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="194" cy="187" r="12" fill="#87b8ff" stroke="#0e1b2e" stroke-width="4"/>
+</svg>

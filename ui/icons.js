@@ -1,5 +1,7 @@
 'use strict';
 const paths={
+star:'<path d="m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.3L12 17.3l-5.7 3 1.1-6.3L2.9 9.6l6.3-.9z"/>',
+search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
 azadi:'<path d="m4 19 8-14 8 14M8 13h8M7 19l5-3 5 3"/>',
 grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
 layers:'<path d="m12 3 10 5-10 5L2 8zM2 12l10 5 10-5M2 16l10 5 10-5"/>',

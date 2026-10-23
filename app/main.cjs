@@ -15,6 +15,23 @@ const exec = promisify(execFile);
 let window, tray, vault, engine, networkLock, data, quitting = false, writeQueue = Promise.resolve();
 const uiPath=path.join(__dirname,'../ui/index.html');
 const uiUrl=pathToFileURL(uiPath).href;
+const appIconCache=new Map();
+async function describeApps(filenames) {
+  const results=new Array(filenames.length);let next=0;
+  // Keep shell icon extraction bounded and cache it outside frequent state IPC.
+  await Promise.all(Array.from({length:Math.min(6,filenames.length)},async()=>{
+    while(next<filenames.length){
+      const index=next++,filename=filenames[index],key=filename.toLowerCase();
+      if(!appIconCache.has(key)){
+        const pending=app.getFileIcon(filename,{size:'normal'}).then(image=>image.isEmpty()?null:image.toDataURL()).catch(()=>null);
+        appIconCache.set(key,pending);
+        if(appIconCache.size>750)appIconCache.delete(appIconCache.keys().next().value);
+      }
+      results[index]={path:filename,name:path.win32.basename(filename),icon:await appIconCache.get(key)};
+    }
+  }));
+  return results;
+}
 const ownsInstance=app.requestSingleInstanceLock();
 if(!ownsInstance)app.quit();
 app.on('second-instance',(_,args)=>{ if(window){window.show();window.focus();} if(args.includes('--restore-network')){queueRecovery();} });
@@ -66,12 +83,17 @@ function wireHandlers() {
   },true);
   handler('choose-app',add,true);
   handler('remove-app',async filename=>{idle();data.apps=data.apps.filter(s=>s!==filename);return save();},true);
+  // Only the selected executable paths can be queried; no arbitrary file-read IPC.
+  handler('app-icons',async()=>process.platform==='win32'?describeApps(data.apps.slice(0,500)):[]);
   handler('running-apps',async()=>{
     if(process.platform!=='win32')return [];
     const ps=path.join(process.env.SystemRoot || 'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
     const script='Get-Process | Where-Object { $_.Path -and $_.Path.EndsWith(".exe") } | Select-Object -ExpandProperty Path -Unique | ConvertTo-Json -Compress';
     const {stdout}=await exec(ps,['-NoProfile','-NonInteractive','-Command',script],{windowsHide:true,timeout:12000,maxBuffer:2*1024*1024});
-    const values=JSON.parse(stdout.trim() || '[]'); return (Array.isArray(values)?values:[values]).filter(p=>{try{normalizeApp(p);return true;}catch{return false;}}).slice(0,250);
+    const values=JSON.parse(stdout.trim() || '[]');
+    const filenames=[...new Set((Array.isArray(values)?values:[values]).filter(p=>{try{normalizeApp(p);return true;}catch{return false;}}))].slice(0,250);
+    filenames.sort((a,b)=>path.win32.basename(a).localeCompare(path.win32.basename(b)));
+    return describeApps(filenames);
   });
   handler('preferences',async changes=>{
     if(!changes || typeof changes!=='object')throw new AppError('operationFailed');

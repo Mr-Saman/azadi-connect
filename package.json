@@ -1,7 +1,7 @@
 {
   "name": "azadi-connect",
   "productName": "Azadi Connect",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Bilingual Windows VPN client with application routing. For Iran ❤️",
   "author": "Saman Salehi and the Azadi Connect contributors",
   "license": "GPL-3.0-or-later",
@@ -18,7 +18,8 @@
     "check:engine": "node scripts/check-engine.mjs",
     "build:guardian": "node scripts/build-guardian.mjs",
     "build:win": "npm run assets && npm run build:guardian && electron-builder --win nsis --x64 --publish never",
-    "build:dir": "electron-builder --win dir --x64 --publish never"
+    "build:dir": "electron-builder --win dir --x64 --publish never",
+    "test:startup": "node scripts/startup-smoke.cjs"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

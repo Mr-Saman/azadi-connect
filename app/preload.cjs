@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('azadi',Object.freeze({
   importText:(raw,credentials)=>invoke('import-text',raw,credentials),
   deleteProfile:id=>invoke('delete-profile',id), selectProfile:id=>invoke('select-profile',id),
   addApp:()=>invoke('add-app'), removeApp:filename=>invoke('remove-app',filename),
-  runningApps:()=>invoke('running-apps'), chooseApp:filename=>invoke('choose-app',filename),
+  runningApps:()=>invoke('running-apps'), appIcons:()=>invoke('app-icons'), chooseApp:filename=>invoke('choose-app',filename),
   preferences:changes=>invoke('preferences',changes), connect:()=>invoke('connect'), disconnect:()=>invoke('disconnect'),
   restoreNetwork:()=>invoke('restore-network'), copyDiagnostics:()=>invoke('copy-diagnostics'),
   window:action=>invoke('window',action), openProject:()=>invoke('open-project'),

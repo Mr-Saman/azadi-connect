@@ -2,6 +2,23 @@
 const $=id=>document.getElementById(id);
 let page='dashboard',state={profiles:[],apps:[],language:'fa',theme:'dark',mode:'apps',connection:{status:'disconnected',upload:0,download:0},encryption:false};
 const api=window.azadi;
+const appIcons=new Map();let runningApps=null,iconRequest=false;
+const sameApp=(a,b)=>a.toLowerCase()===b.toLowerCase();
+const hasApp=filename=>state.apps.some(p=>sameApp(p,filename));
+const appMatches=filename=>filename.toLocaleLowerCase().includes($('app-search').value.trim().toLocaleLowerCase());
+function rememberIcons(items){for(const item of items||[]){if(item.path)appIcons.set(item.path.toLowerCase(),item.icon||null);}}
+function appAvatar(filename){
+ const avatar=el('span','app-avatar'),src=appIcons.get(filename.toLowerCase());
+ avatar.textContent=filename.split('\\').pop().slice(0,1).toUpperCase();
+ if(typeof src==='string'&&/^data:image\/png;base64,/.test(src)){const img=el('img');img.src=src;img.alt='';img.width=32;img.height=32;img.addEventListener('error',()=>img.remove());avatar.append(img);}
+ return avatar;
+}
+async function loadAppIcons(){
+ if(iconRequest||!api?.appIcons||!state.apps.some(p=>!appIcons.has(p.toLowerCase())))return;
+ iconRequest=true;
+ try{const result=await api.appIcons();if(result?.ok){rememberIcons(result.data);appRows($('quick-app-list'),2);appRows($('apps-list'));}}catch{}finally{iconRequest=false;}
+}
+
 const t=key=>window.messages[state.language]?.[key] || window.messages.en[key] || key;
 const el=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=content;return e;};
 function iconElement(name,cls=''){const e=el('span',cls);e.innerHTML=window.icon(name);return e;}
@@ -14,7 +31,7 @@ async function call(name,...args){
   if(result.data?.connection){state=result.data;render();}return result.data;
  }catch{toast(t('operationFailed'),true);return null;}
 }
-function navigate(value){page=value;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('active',e.id==='view-'+page));document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===page));updateTitles();}
+function navigate(value){page=value;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('active',e.id==='view-'+page));document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===page));updateTitles();$('workspace-content').scrollTop=0;}
 function updateTitles(){$('page-title').textContent=t(page+'Title');$('page-subtitle').textContent=t(page+'Sub');}
 function formatBytes(bytes){if(!bytes)return '0 B';const i=Math.min(3,Math.floor(Math.log(bytes)/Math.log(1024)));return (bytes/1024**i).toFixed(i?1:0)+' '+['B','KB','MB','GB'][i];}
 function duration(){const seconds=state.connection.startedAt?Math.max(0,Math.floor((Date.now()-state.connection.startedAt)/1000)):0;$('duration').textContent=[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(s=>String(s).padStart(2,'0')).join(':');}
@@ -24,9 +41,25 @@ function empty(target,title,subtitle,action){
 }
 function appRows(target,limit){
  target.replaceChildren();if(!state.apps.length){empty(target,'noApps','noAppsSub');return;}
- for(const filename of state.apps.slice(0,limit||500)){
-  const name=filename.split('\\').pop();const row=el('div','item-row');row.append(el('span','app-avatar',name.slice(0,1).toUpperCase()));const meta=el('div','item-meta');meta.append(el('strong','',name),el('small','',filename));row.append(meta,el('span','protocol-pill',t(state.mode==='system'||state.apps.includes(filename)?'viaVpn':'direct')));
-  if(!limit){const remove=el('button','icon-button remove');remove.innerHTML=window.icon('trash');remove.setAttribute('aria-label',t('delete')+' '+name);remove.disabled=['connected','connecting'].includes(state.connection.status);remove.addEventListener('click',()=>call('removeApp',filename));row.append(remove);}target.append(row);
+ const files=limit?state.apps.slice(0,limit):state.apps.filter(appMatches);
+ if(!limit)$('app-search-count').textContent=files.length.toLocaleString(state.language);
+ if(!files.length){empty(target,'noMatches','noMatchesSub');return;}
+ for(const filename of files){
+  const name=filename.split('\\').pop();const row=el('div','item-row');row.append(appAvatar(filename));const meta=el('div','item-meta');meta.append(el('strong','',name),el('small','',filename));row.append(meta,el('span','protocol-pill',t(state.mode==='system'||state.apps.includes(filename)?'viaVpn':'direct')));
+  if(!limit){const remove=el('button','icon-button remove');remove.innerHTML=window.icon('trash');remove.setAttribute('aria-label',t('delete')+' '+name);remove.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;remove.addEventListener('click',()=>call('removeApp',filename));row.append(remove);}target.append(row);
+ }
+}
+function renderRunningApps(){
+ const target=$('running-list');if(runningApps===null)return;
+ target.classList.remove('hidden');target.replaceChildren(el('h3','',t('runningApps')));
+ if(!runningApps.length){target.append(el('p','muted',t('noRunning')));return;}
+ const files=runningApps.filter(appMatches);
+ if(!files.length){empty(target,'noMatches','noMatchesSub');return;}
+ for(const filename of files){
+  const row=el('div','item-row'),meta=el('div','item-meta');meta.append(el('strong','',filename.split('\\').pop()),el('small','',filename));
+  const add=el('button','button secondary',t(hasApp(filename)?'added':'addApp'));
+  add.disabled=hasApp(filename)||['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;
+  add.addEventListener('click',()=>call('chooseApp',filename));row.append(appAvatar(filename),meta,add);target.append(row);
  }
 }
 function renderProfiles(){
@@ -35,7 +68,7 @@ function renderProfiles(){
 }
 function render(){
  const language=state.language==='en'?'en':'fa';document.documentElement.lang=language;document.documentElement.dir=language==='fa'?'rtl':'ltr';document.documentElement.dataset.theme=state.theme;
- document.querySelectorAll('[data-i18n]').forEach(e=>{e.textContent=t(e.dataset.i18n);});updateTitles();
+ document.querySelectorAll('[data-i18n]').forEach(e=>{e.textContent=t(e.dataset.i18n);});document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));updateTitles();
  $('language').textContent=language==='fa'?'EN ⇄':'فا ⇄';$('profile-count').textContent=state.profiles.length.toLocaleString(language==='fa'?'fa-IR':'en-US');
  const status=state.connection.status;const active=status==='connected';const busy=status==='connecting';const locked=active||busy||state.networkLock?.active;
  $('state-badge').textContent=t(status);$('state-badge').className='state-badge '+status;$('orbital').className='orbital '+status;
@@ -55,7 +88,7 @@ function render(){
  $('profile-info').title=selected?.protocol==='wireguard'?(state.language==='fa'?'محدودهٔ AllowedIPs حفظ می‌شود؛ دسترسی کامل اینترنت به سرور بستگی دارد.':'AllowedIPs are preserved; full internet access depends on your server.'):(selected?.notes||[]).join('\n');
  $('mode-apps').classList.toggle('selected',state.mode==='apps');$('mode-system').classList.toggle('selected',state.mode==='system');$('mode-apps').disabled=locked;$('mode-system').disabled=locked;
  $('add-app').disabled=locked;$('running-apps').disabled=locked;document.querySelectorAll('.import-trigger').forEach(e=>e.disabled=locked);
- appRows($('quick-app-list'),2);appRows($('apps-list'));renderProfiles();
+ appRows($('quick-app-list'),2);appRows($('apps-list'));renderRunningApps();renderProfiles();loadAppIcons();
  if(state.connection.error && render.lastError!==state.connection.error){toast(t(state.connection.error),true);}render.lastError=state.connection.error;
 }
 function openImport(){$('import-dialog').showModal();$('profile-text').focus();}
@@ -72,16 +105,19 @@ $('profile-select').addEventListener('change',e=>{if(e.target.value)call('select
 $('mode-apps').addEventListener('click',()=>call('preferences',{mode:'apps'}));$('mode-system').addEventListener('click',()=>call('preferences',{mode:'system'}));
 $('connect').addEventListener('click',connect);$('power').addEventListener('click',connect);
 $('manage-apps').addEventListener('click',()=>navigate('apps'));$('add-app').addEventListener('click',()=>call('addApp'));
+$('app-search').addEventListener('input',()=>{appRows($('apps-list'));renderRunningApps();});
 $('running-apps').addEventListener('click',async()=>{
- const files=await call('runningApps');if(!files)return;const target=$('running-list');target.classList.remove('hidden');target.replaceChildren(el('h3','',t('runningApps')));
- if(!files.length)target.append(el('p','muted',t('noRunning')));
- for(const filename of files){const row=el('div','item-row');const meta=el('div','item-meta');meta.append(el('strong','',filename.split('\\').pop()),el('small','',filename));const add=el('button','button secondary',t(state.apps.includes(filename)?'added':'addApp'));add.disabled=state.apps.includes(filename);add.addEventListener('click',async()=>{if(await call('chooseApp',filename)){add.disabled=true;add.textContent=t('added');}});row.append(meta,add);target.append(row);}
+ const button=$('running-apps');button.disabled=true;button.setAttribute('aria-busy','true');
+ try{
+  const items=await call('runningApps');if(!items)return;
+  rememberIcons(items);runningApps=items.map(item=>typeof item==='string'?item:item.path).filter(Boolean);renderRunningApps();
+ }finally{button.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;button.removeAttribute('aria-busy');}
 });
 const setLanguage=language=>call('preferences',{language});const setTheme=()=>call('preferences',{theme:state.theme==='dark'?'light':'dark'});
 $('language').addEventListener('click',()=>setLanguage(state.language==='fa'?'en':'fa'));$('set-fa').addEventListener('click',()=>setLanguage('fa'));$('set-en').addEventListener('click',()=>setLanguage('en'));$('theme').addEventListener('click',setTheme);$('set-theme').addEventListener('click',setTheme);
 $('kill-switch').addEventListener('change',e=>call('preferences',{killSwitch:e.target.checked}));
 $('restore-network').addEventListener('click',()=>call('restoreNetwork'));
 $('copy-diagnostics').addEventListener('click',async()=>{if(await call('copyDiagnostics'))toast(t('diagnosticsCopied'));});
-$('win-min').addEventListener('click',()=>call('window','minimize'));$('win-max').addEventListener('click',()=>call('window','maximize'));$('win-close').addEventListener('click',()=>call('window','close'));$('project-link').addEventListener('click',()=>call('openProject'));
+$('win-min').addEventListener('click',()=>call('window','minimize'));$('win-max').addEventListener('click',()=>call('window','maximize'));$('win-close').addEventListener('click',()=>call('window','close'));$('project-link').addEventListener('click',()=>call('openProject'));$('star-project').addEventListener('click',()=>call('openProject'));
 if(api){api.onState(value=>{state=value;render();});call('state');}else render();
 setInterval(duration,1000);
