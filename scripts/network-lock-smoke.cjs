@@ -67,10 +67,12 @@ async function throughCore(port) {
    const tunneledProxy=await start(true);console.log('PASS isolated TUN startup');
    await ps("New-NetRoute -DestinationPrefix '1.1.1.1/32' -InterfaceAlias 'AzadiConnect' -NextHop '0.0.0.0' -RouteMetric 1 -PolicyStore ActiveStore -ErrorAction Stop | Out-Null");
    routeAdded=true;
-   assert.ok(await throughCore(tunneledProxy),'Core transport failed with the isolated TUN route installed');
-   assert.ok(await probe(selected),'Fixture traffic did not traverse the test TUN route');
+   // Mirror Engine.connect: refresh the policy with the real TUN LUID before
+   // checking traffic. The pre-start policy deliberately permits no TUN yet.
    await invoke('arm',policy);
    assert.equal((await invoke('status')).complete,true);
+   assert.ok(await throughCore(tunneledProxy),'Core transport failed with the isolated TUN route installed');
+   assert.ok(await probe(selected),'Fixture traffic did not traverse the test TUN route');
    assert.ok(await probe(selected),'Kill Switch incorrectly blocked the TUN path');
    console.log('PASS Wintun + guardian startup and permitted TUN traffic');
    await stop();
