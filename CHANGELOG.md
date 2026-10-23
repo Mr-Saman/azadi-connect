@@ -1,5 +1,18 @@
 # Changelog · تغییرات 🚀
 
+## 0.3.0 — Preview
+
+- Fix sing-box 1.14 startup failure: remove the redundant empty-direct DNS detour and deprecated `independent_cache` setting.
+- Execute generated DNS settings in a real core-startup regression test, in both routing modes with TLS/profile DNS.
+- Fit the overview to the minimum desktop size; keep header/footer fixed and scroll long content within one pane.
+- Show executable icons for running/selected Windows apps with bounded cached extraction and a fallback.
+- Search both application lists by name or path, without case sensitivity.
+- Add localized GitHub star support cards in the application and outlined SVG banners in both README guides.
+- Remove ChatGPT attribution from the application interface; retain the full attribution in README.
+- Refresh the project icon and add an optimized Persian promotional WebP only in the Persian README section.
+
+رفع خطای DNS، اصلاح اسکرول، آیکون و جست‌وجوی برنامه‌ها، حمایت با استار و پوستر تازه در این نسخه ارائه شده‌اند.
+
 ## 0.2.0 — Preview
 
 - Add optional persistent Windows WFP Kill Switch for exact executable scope or the whole system; protect both IP versions.
@@ -17,5 +30,3 @@
 - Add DPAPI storage, restrictive runtime ACLs, authenticated local control and binary integrity checks.
 - Add Windows native child supervision, a branded NSIS EXE installer and release automation.
 - Document current limitations: no kill switch, no independent audit, and live provider/Windows networking tests still required.
-
-این نخستین نسخهٔ پیش‌نمایش پروژه است و کد برنامه، رابط و مستندات با ChatGPT تولید شده‌اند.

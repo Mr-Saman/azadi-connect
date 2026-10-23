@@ -1,0 +1,18 @@
+Built-in image generation · marketing poster · 2026-10-23
+Reference 1: ui/assets/icon.png (use this exact Azadi Connect brand mark).
+Reference 2: docs/screenshots/persian-dark.png (the real disconnected interface).
+
+Create a finished, exceptionally polished Persian advertising poster for the open-source Windows VPN client Azadi Connect. Landscape 3:2 composition, highest available resolution, lossless PNG. A restrained premium software campaign: deep midnight navy, mint-cyan and a small periwinkle accent, crisp Persian typography, beautifully balanced generous negative space, tasteful soft studio light. No visual clutter, no stock hacker imagery, no flags, no padlocks, no world map, no extra promises.
+
+Use the exact supplied A/route logo, large enough to be recognizable, as the brand emblem near the upper right. Right aligned elegant Persian headline and name. One slim beautifully framed desktop app window based on reference 2 occupies the lower left/center, with a subtle perspective tilt and soft realistic shadow; keep its essential interface recognizable, dark mode and disconnected state. Do not show a fabricated active VPN or provider. Simplify tiny UI type only where necessary. A single delicate mint light trail connects the emblem and app window, suggesting freedom to choose routes, without a network diagram.
+
+Use ONLY the following promotional text, carefully spelled, properly connected RTL Persian. Make the text sparse, clear and beautifully typeset, never a dense list:
+Large brand name: «آزادی کانکت»
+Headline: «اینترنت، به انتخاب تو.»
+A compact single line: «مسیر هر برنامه یا تمام سیستم»
+Three understated protocol names: WireGuard · V2Ray · OpenVPN
+A small secondary line: «ویندوز • فارسی و English • متن‌باز»
+Bottom signature with a bright red heart: «برای ایران ❤️» and “For Iran ❤️”
+Small, accurately spelled repository address: github.com/Mr-Saman/azadi-connect
+
+No ChatGPT attribution in the poster. No version number, no fake download counts, no unsupported security guarantees, no QR code, no extra words, no watermarks. Keep about one third of the canvas as breathing room. This must feel like one cohesive campaign poster, not a screenshot pasted onto a busy background.

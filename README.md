@@ -10,7 +10,7 @@
 
 🇮🇷 **برای ایران ❤️ · For Iran ❤️**
 
-**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.2.0 Preview**
+**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.3.0 Preview**
 
 [English guide](#english) · [راهنمای فارسی](#فارسی) · [Architecture](docs/ARCHITECTURE.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
@@ -19,6 +19,10 @@
 ---
 
 ## English
+
+[![Support Azadi Connect — Star on GitHub](docs/branding/support-en.svg)](https://github.com/Mr-Saman/azadi-connect)
+
+**Enjoy the project? Tap ⭐ Star at the top of this repository. Your support helps others find it.**
 
 ![Azadi Connect English interface](docs/screenshots/english-dark.png)
 
@@ -32,7 +36,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 ### 🪟 Install on Windows
 
-1. Open this repository’s **Releases** page and download `Azadi-Connect-0.2.0-Windows-x64-Setup.exe` when attached to the release.
+1. Open this repository’s **Releases** page and download `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/latest).
 2. Run the installer and accept the Windows Administrator/UAC request. The installer offers an installation directory and shortcuts.
 3. Open **Azadi Connect → Add profile**. Import your configuration, or paste a share link.
 4. Choose **Selected applications** and add the actual `.exe` paths, or choose **Entire system**.
@@ -76,7 +80,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 - 🌗 Dark and light themes, locally bundled fonts and original vector icons.
 - 🗂️ Multiple profiles, active-profile selection and offline batch imports.
-- 🧭 Executable picker and a list of running Windows applications.
+- 🧭 Executable picker and a searchable list of running Windows applications with their executable icons. Missing icons fall back to an initial.
 - 🔒 DPAPI profile vault, restricted runtime directory ACLs and pinned engine integrity checks.
 - 🛡️ Sandboxed renderer, narrow IPC bridge, denied navigation and remote network requests.
 - 🛡️ Optional persistent Kill Switch with explicit Internet recovery.
@@ -108,7 +112,7 @@ To create the installable Windows EXE:
 npm run build:win
 ```
 
-Output: `dist/Azadi-Connect-0.2.0-Windows-x64-Setup.exe`.
+Output: `dist/Azadi-Connect-0.3.0-Windows-x64-Setup.exe`.
 
 The download script pins **sing-box 1.14.3** and its official archive SHA-256. It never silently selects “latest.” The native guardian is compiled from the included C source, then its hash is recorded. The application rechecks both binaries before connecting. Installer branding, version information and the Administrator manifest are embedded with a JavaScript PE resource editor; Wine is not required for packaging on Linux.
 
@@ -121,13 +125,21 @@ npm run test:ui
 
 ### 🚀 Releases & development history
 
-The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 21 unit checks and 7 UI checks, compiles both native helpers, validates 22 generated configurations, and exercises Wintun traffic, core crash, persistent per-app/system filtering and explicit recovery on a disposable Windows runner before packaging. On a published `v0.2.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
+The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 21 unit checks and 10 UI checks, compiles both native helpers, validates 22 generated configurations, starts four generated DNS/mode combinations to catch runtime transport errors, and exercises Wintun traffic, core crash, persistent per-app/system filtering and explicit recovery on a disposable Windows runner before packaging. On a published `v0.3.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
 
 The initial implementation is developed in separate commits for the protocol core, desktop UI, validation, documentation and release packaging. Release binaries are generated from the checked-out commit, not committed into Git history.
 
 ---
 
 ## فارسی
+
+[![با استار از آزادی کانکت حمایت کن](docs/branding/support-fa.svg)](https://github.com/Mr-Saman/azadi-connect)
+
+**این پروژه به کارت آمده؟ بالای همین صفحه روی ⭐ Star بزن؛ همین حمایت کوچک کمک می‌کند افراد بیشتری آزادی کانکت را پیدا کنند.**
+
+![پوستر معرفی آزادی کانکت؛ انتخاب مسیر هر برنامه یا تمام سیستم](docs/branding/poster-fa.webp)
+
+*پوستر معرفی؛ پنجرهٔ برنامه یک تصویر تبلیغاتی از حالت قطع اتصال است. نسخهٔ WebP بهینه‌شده، حدود ۷۴ کیلوبایت.*
 
 ![رابط فارسی آزادی کانکت](docs/screenshots/persian-dark.png)
 
@@ -141,7 +153,7 @@ The initial implementation is developed in separate commits for the protocol cor
 
 ### 🪟 روش نصب و استفاده
 
-۱. از بخش **Releases** فایل `Azadi-Connect-0.2.0-Windows-x64-Setup.exe` را، پس از پیوست‌شدن به نسخه، دریافت کن.
+۱. از بخش **Releases** فایل `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/latest) دریافت کن.
 
 ۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد.
 
@@ -166,7 +178,7 @@ The initial implementation is developed in separate commits for the protocol cor
 | SOCKS و HTTP(S) | به اندازهٔ قابلیت خروجی؛ HTTP ترافیک دلخواه UDP را پشتیبانی نمی‌کند |
 | فهرست آفلاین | فایل متنی یا لینک‌های چندخطی و فهرست Base64 |
 | ظاهر | تم روشن/تاریک، فارسی و انگلیسی، آیکون‌های اختصاصی و فونت محلی |
-| مدیریت برنامه‌ها | انتخاب `.exe` و فهرست پردازش‌های در حال اجرا |
+| مدیریت برنامه‌ها | انتخاب `.exe`، آیکون فایل اجرایی و جست‌وجوی نام یا مسیر در فهرست منتخب و برنامه‌های در حال اجرا |
 | وضعیت | مصرف جلسه، تأخیر آزمایش اتصال و مدت اتصال |
 
 پشتیبانی یعنی مسیر ورود و ساخت کانفیگ پیاده‌سازی شده و با بررسی‌کنندهٔ موتور تطبیق داده شده است؛ تضمین سازگاری تمام سرورها نیست. **JSON/YAML خام، اشتراک آنلاین، XHTTP، افزونه‌های Shadowsocks، OpenVPN نوع TAP یا MFA، کلید خصوصی OpenVPN رمزدار، فایل‌های جانبی، اسکریپت و پلاگین و همهٔ پسوندهای اختصاصی VPN پشتیبانی نمی‌شوند.**
@@ -231,3 +243,10 @@ The old “engine stopped; no kill switch” message combined two unrelated fact
 This release remains **unsigned**. Code signing verifies publisher identity and file integrity; it does not repair a VPN connection. See the bilingual [signing guide](docs/CODE_SIGNING.md) for identity validation, country eligibility, OV/EV differences and the changes needed in this build pipeline.
 
 این نسخه هنوز **امضای تجاری ندارد**. امضا، هویت ناشر و دست‌نخوردن فایل را بررسی‌پذیر می‌کند و درمان خطای اتصال VPN نیست. [راهنمای دو زبانهٔ امضا](docs/CODE_SIGNING.md) روش دریافت، محدودیت کشورها و تفاوت OV و EV را توضیح می‌دهد.
+
+
+### 🧰 Version 0.3 DNS startup fix · رفع خطای DNS نسخهٔ ۰٫۳
+
+The generated bootstrap DNS transport now uses its own default direct dialer. An explicit `detour: direct` to an empty direct outbound was rejected during sing-box 1.14 startup even though `check` succeeded. The deprecated `independent_cache` field is removed, following the [official migration guide](https://sing-box.sagernet.org/migration/#migrate-independent-dns-cache). A runtime smoke test starts the actual generated DNS settings in both route modes, with and without a profile DNS IP. It uses a synthetic endpoint and does not claim a successful provider connection.
+
+ارجاع اضافی DNS اولیه به خروجی `direct` باعث خطای `detour to an empty direct outbound makes no sense` می‌شد. در نسخهٔ ۰٫۳ این ارجاع و گزینهٔ منسوخ `independent_cache` حذف شده‌اند. تنظیم DNS اولیه همچنان مستقیم است و DNS عادی از VPN عبور می‌کند. آزمون جدید، خود موتور را با تنظیمات DNS تولیدشده اجرا می‌کند؛ صرفا بررسی ساختار کانفیگ نیست.
