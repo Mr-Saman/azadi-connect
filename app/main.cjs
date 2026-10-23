@@ -88,7 +88,7 @@ function wireHandlers() {
   handler('running-apps',async()=>{
     if(process.platform!=='win32')return [];
     const ps=path.join(process.env.SystemRoot || 'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
-    const script='Get-Process | Where-Object { $_.Path -and $_.Path.EndsWith(".exe") } | Select-Object -ExpandProperty Path -Unique | ConvertTo-Json -Compress';
+    const script='[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); Get-Process | Where-Object { $_.Path -and $_.Path.EndsWith(".exe") } | Select-Object -ExpandProperty Path -Unique | ConvertTo-Json -Compress';
     const {stdout}=await exec(ps,['-NoProfile','-NonInteractive','-Command',script],{windowsHide:true,timeout:12000,maxBuffer:2*1024*1024});
     const values=JSON.parse(stdout.trim() || '[]');
     const filenames=[...new Set((Array.isArray(values)?values:[values]).filter(p=>{try{normalizeApp(p);return true;}catch{return false;}}))].slice(0,250);
@@ -161,7 +161,7 @@ app.whenReady().then(async()=>{
   window.webContents.on('will-navigate',(event,url)=>{if(url!==uiUrl)event.preventDefault();});
   window.webContents.session.setPermissionRequestHandler((_,__,callback)=>callback(false));
   window.webContents.session.webRequest.onBeforeRequest((details,callback)=>{
-    const allowed=details.url.startsWith(pathToFileURL(path.join(__dirname,'../ui/')).href);
+    const allowed=details.url.startsWith(pathToFileURL(path.join(__dirname,'../ui/')).href) || (details.resourceType==='image' && details.url.startsWith('data:image/png;base64,'));
     callback({cancel:!allowed});
   });
   wireHandlers(); await window.loadFile(uiPath);window.show();
