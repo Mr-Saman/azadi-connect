@@ -17,5 +17,11 @@ module.exports=async context=>{
  res.entries=res.entries.filter(e=>e.type!==24);
  res.entries.push({type:24,id:1,lang:1033,codepage:65001,bin:Buffer.from(xml,'utf8')});
  res.outputResource(exe);await fs.writeFile(file,Buffer.from(exe.generate()));
+ const all=[];const dirs=[];
+ async function walk(directory){for(const item of await fs.readdir(directory,{withFileTypes:true})){const full=path.join(directory,item.name);if(item.isDirectory()){await walk(full);dirs.push(path.relative(context.appOutDir,full));}else all.push(path.relative(context.appOutDir,full));}}
+ await walk(context.appOutDir);
+ const quote=value=>value.replace(/\\/g,'/').replace(/\$/g,'$$').replace(/"/g,'$\\"').replace(/\//g,'\\');
+ const lines=['; Generated from the packaged file list. Never delete unrelated files.','!macro RemoveAzadiFiles',...all.map(f=>`  Delete "$INSTDIR\\${quote(f)}"`),...dirs.map(d=>`  RMDir "$INSTDIR\\${quote(d)}"`),'!macroend',''];
+ await fs.writeFile(path.join(context.packager.projectDir,'build/uninstall-files.nsh'),lines.join('\n'));
  console.log('Applied Azadi branding, local icon, version and Administrator manifest');
 };

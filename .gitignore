@@ -8,3 +8,10 @@ resources/core/*
 runtime/
 .env*
 !examples/
+build/uninstall-files.nsh
+guardian.obj
+*.conf
+*.ovpn
+*.key
+*.pem
+!tests/fixtures/ca.pem

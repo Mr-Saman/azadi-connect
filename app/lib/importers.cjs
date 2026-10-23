@@ -58,6 +58,7 @@ function wireguard(raw, name) {
       return p;
     }) };
   if (iface.mtu) { const n = Number(iface.mtu); if (!Number.isInteger(n) || n < 1280 || n > 9000) fail('MTU must be 1280–9000'); endpoint.mtu = n; }
+  if (iface.listenport) { const n=Number(iface.listenport); if(!Number.isInteger(n)||n<0||n>65535)fail('Invalid ListenPort'); endpoint.listen_port=n; }
   const dns = (iface.dns || '').split(',').map(s => s.trim()).filter(s => isIP(s));
   return profile(name || 'WireGuard', endpoint, dns, ['AllowedIPs are preserved; this profile may only provide access to a private network.']);
 }
@@ -88,7 +89,8 @@ function link(raw, name) {
   if (raw.startsWith('vmess://')) {
     let v; try { v = JSON.parse(base64(raw.slice(8))); } catch { fail('Invalid VMess link'); }
     if (Number(v.aid || 0) !== 0) fail('Legacy VMess alterId is unsupported');
-    const p = new URLSearchParams({ type: v.net || 'tcp', security: v.tls || 'none', sni: v.sni || '', host: v.host || '', path: v.path || '/', alpn: v.alpn || '', fp: v.fp || '' });
+    if(v.type && v.type!=='none')fail('VMess legacy header obfuscation is unsupported');
+    const p = new URLSearchParams({ type: v.net || 'tcp', security: v.tls || 'none', sni: v.sni || '', host: v.host || '', path: v.path || '/', serviceName:v.net==='grpc'?(v.path||''):'', alpn: v.alpn || '', fp: v.fp || '' });
     const e = { type: 'vmess', server: host(v.add), server_port: port(v.port), uuid: uuid(v.id), security: v.scy || 'auto', alter_id: 0 };
     const t = transport(p); const t2 = tls(p, e.server); if (t) e.transport = t; if (t2) e.tls = t2;
     return profile(name || v.ps || 'VMess', e);

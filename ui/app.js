@@ -45,6 +45,7 @@ function render(){
  $('footer-status').textContent=t(active?'connected':status==='error'?'error':'direct');$('vault-state').textContent=state.encryption?'DPAPI':'—';
  const select=$('profile-select');select.replaceChildren();const placeholder=el('option','',t('emptySelect'));placeholder.value='';select.append(placeholder);for(const p of state.profiles){const option=el('option','',p.name+' · '+p.protocol);option.value=p.id;select.append(option);}select.value=state.selectedId||'';select.disabled=locked;
  const selected=state.profiles.find(p=>p.id===state.selectedId);$('profile-info').textContent=selected?.server||'WireGuard · VLESS · Shadowsocks · OpenVPN';
+ $('profile-info').title=selected?.protocol==='wireguard'?(state.language==='fa'?'محدودهٔ AllowedIPs حفظ می‌شود؛ دسترسی کامل اینترنت به سرور بستگی دارد.':'AllowedIPs are preserved; full internet access depends on your server.'):(selected?.notes||[]).join('\n');
  $('mode-apps').classList.toggle('selected',state.mode==='apps');$('mode-system').classList.toggle('selected',state.mode==='system');$('mode-apps').disabled=locked;$('mode-system').disabled=locked;
  $('add-app').disabled=locked;$('running-apps').disabled=locked;document.querySelectorAll('.import-trigger').forEach(e=>e.disabled=locked);
  appRows($('quick-app-list'),2);appRows($('apps-list'));renderProfiles();

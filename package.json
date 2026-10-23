@@ -65,6 +65,7 @@
     },
     "nsis": {
       "oneClick": false,
+      "script": "build/installer.nsi",
       "perMachine": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
