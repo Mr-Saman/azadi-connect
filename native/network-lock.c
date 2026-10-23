@@ -58,8 +58,11 @@ static DWORD listFilters(BOOL remove, UINT32 *count, UINT64 *policy) {
             if(code)break;
             for(UINT32 i=0;i<size;i++) {
                 if(!IsEqualGUID(&entries[i]->subLayerKey,&sublayerKey))continue;
-                if(*count==0)*policy=entries[i]->rawContext;
-                else if(*policy!=entries[i]->rawContext)*policy=0;
+                UINT64 marker=0;
+                if(entries[i]->providerData.size==sizeof(marker) && entries[i]->providerData.data)
+                    memcpy(&marker,entries[i]->providerData.data,sizeof(marker));
+                if(*count==0)*policy=marker;
+                else if(*policy!=marker)*policy=0;
                 if(entries[i]->flags & FWPM_FILTER_FLAG_DISABLED)*policy=0;
                 (*count)++;
                 if(remove && (code=check(FwpmFilterDeleteById0(engine,entries[i]->filterId),"delete-owned-filter")))break;
@@ -82,7 +85,10 @@ static DWORD addFilter(const GUID *layer, FWP_ACTION_TYPE action, UINT64 weight,
     filter.action.type=action;
     filter.weight.type=FWP_UINT64;filter.weight.uint64=&weight;
     filter.filterCondition=conditions;filter.numFilterConditions=count;
-    filter.rawContext=context;
+    /* Static permit/block filters have no callout context. Keep policy
+       completeness metadata in the provider's opaque data instead. */
+    filter.providerData.size=sizeof(context);
+    filter.providerData.data=(UINT8*)&context;
     return check(FwpmFilterAdd0(engine,&filter,NULL,NULL),"add-filter");
 }
 static FWPM_FILTER_CONDITION0 condition(const GUID *field, FWP_DATA_TYPE type) {

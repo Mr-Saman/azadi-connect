@@ -48,7 +48,7 @@ test('a failed VPN probe keeps an already armed network lock and reports its own
  assert.match(engine.state.detail,/stage=probe/);assert.match(engine.state.detail,/504/);
 });
 test('redaction covers nested credentials and certificate body lines',()=>{
- const credentials={password:'abc',nested:{uuid:'test-uuid',client_key:'-----BEGIN KEY-----\nline-of-secret\n-----END KEY-----'}};
+ const credentials={password:'abc',nested:{uuid:'test-uuid',client_key:['-----BEGIN KEY-----\nline-of-secret\n-----END KEY-----']}};
  const output=scrub('abc test-uuid line-of-secret',profileSecrets(credentials));
  assert.ok(!output.includes('abc'));assert.ok(!output.includes('test-uuid'));assert.ok(!output.includes('line-of-secret'));
 });

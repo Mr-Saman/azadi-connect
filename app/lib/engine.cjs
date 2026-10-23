@@ -20,10 +20,11 @@ function scrub(line, secrets = []) {
   return s.replace(/(?:[A-Za-z0-9+/]{40,}={0,2})/g,'[redacted]').slice(-4000);
 }
 function profileSecrets(value,key='',result=[]) {
-  if(typeof value==='string' && /private|password|uuid|secret|token|certificate|client_key|pre_shared|public_key/i.test(key)) {
+  if(typeof value==='string' && /private|password|username|uuid|secret|token|certificate|client_key|pre_shared|public_key/i.test(key)) {
     result.push(value);
     if(value.includes('\n'))result.push(...value.split(/\r?\n/).filter(s=>s && !s.startsWith('-----')));
-  } else if(value && typeof value==='object')for(const [k,v]of Object.entries(value))profileSecrets(v,k,result);
+  } else if(Array.isArray(value))for(const item of value)profileSecrets(item,key,result);
+  else if(value && typeof value==='object')for(const [k,v]of Object.entries(value))profileSecrets(v,k,result);
   return result;
 }
 class Engine extends EventEmitter {
