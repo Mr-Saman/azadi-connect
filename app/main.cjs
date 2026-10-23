@@ -1,30 +1,32 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, safeStorage, Tray, Menu, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, safeStorage, Tray, Menu, nativeImage, shell, clipboard } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { Vault, systemExe } = require('./lib/vault.cjs');
+const { NetworkLock } = require('./lib/network-lock.cjs');
 const { Engine } = require('./lib/engine.cjs');
 const { importProfiles, MAX_IMPORT } = require('./lib/importers.cjs');
 const { normalizeApp } = require('./lib/config.cjs');
 const { AppError } = require('./lib/errors.cjs');
 const exec = promisify(execFile);
-let window, tray, vault, engine, data, quitting = false, writeQueue = Promise.resolve();
+let window, tray, vault, engine, networkLock, data, quitting = false, writeQueue = Promise.resolve();
 const uiPath=path.join(__dirname,'../ui/index.html');
 const uiUrl=pathToFileURL(uiPath).href;
-if(!app.requestSingleInstanceLock()) app.quit();
-app.on('second-instance',()=>{ if(window){window.show();window.focus();} });
+const ownsInstance=app.requestSingleInstanceLock();
+if(!ownsInstance)app.quit();
+app.on('second-instance',(_,args)=>{ if(window){window.show();window.focus();} if(args.includes('--restore-network')){const task=writeQueue.then(restoreNetwork);writeQueue=task.catch(()=>{});} });
 function snapshot() {
   return { version:app.getVersion(), platform:process.platform,
     profiles:data.profiles.map(p=>({id:p.id,name:p.name,protocol:p.protocol,notes:p.notes,server:p.endpoint.server || p.endpoint.peers?.[0]?.address || p.endpoint.servers?.[0]?.server || ''})),
     apps:data.apps, selectedId:data.selectedId, mode:data.mode, language:data.language, theme:data.theme || 'dark',
-    connection:{...engine.state}, encryption:safeStorage.isEncryptionAvailable(), coreVersion:'1.14.3' };
+    killSwitch:!!data.killSwitch, networkLock:{...networkLock.state}, connection:{...engine.state}, encryption:safeStorage.isEncryptionAvailable(), coreVersion:'1.14.3' };
 }
 function notify() { if(window && !window.isDestroyed()) window.webContents.send('state-change',snapshot()); updateTray(); }
 async function save() { await vault.write(data); notify(); return snapshot(); }
-function idle() { if(engine.child || engine.busy) throw new AppError('disconnectFirst'); }
+function idle() { if(engine.child || engine.busy || networkLock.state.active) throw new AppError('disconnectFirst'); }
 function handler(name, fn, mutation = false) {
   ipcMain.handle(name,async(event,...args)=>{
     if(event.sender !== window.webContents || event.senderFrame?.url !== uiUrl) return {ok:false,error:'untrustedWindow'};
@@ -32,6 +34,10 @@ function handler(name, fn, mutation = false) {
     if(!mutation) return execute();
     const task=writeQueue.then(execute,execute); writeQueue=task.then(()=>{}); return task;
   });
+}
+async function restoreNetwork() {
+  await engine?.stop(); await networkLock.unlock();
+  if(data){data.killSwitch=false;return save();}
 }
 async function importRaw(raw,name,credentials) {
   idle(); const imported=importProfiles(raw,name,credentials || {});
@@ -65,6 +71,7 @@ function wireHandlers() {
   });
   handler('preferences',async changes=>{
     if(!changes || typeof changes!=='object')throw new AppError('operationFailed');
+    if(changes.killSwitch!==undefined){if(typeof changes.killSwitch!=='boolean')throw new AppError('operationFailed');if(changes.killSwitch){idle();data.killSwitch=true;}else{await restoreNetwork();}}
     if(changes.mode!==undefined){idle();if(!['apps','system'].includes(changes.mode))throw new AppError('invalidMode');data.mode=changes.mode;}
     if(changes.language!==undefined){if(!['fa','en'].includes(changes.language))throw new AppError('operationFailed');data.language=changes.language;}
     if(changes.theme!==undefined){if(!['dark','light'].includes(changes.theme))throw new AppError('operationFailed');data.theme=changes.theme;}
@@ -74,9 +81,11 @@ function wireHandlers() {
     if(process.platform!=='win32')throw new AppError('windowsOnly');
     if(!safeStorage.isEncryptionAvailable())throw new AppError('encryptionUnavailable');
     const p=data.profiles.find(p=>p.id===data.selectedId);if(!p)throw new AppError('selectProfile');
-    await engine.connect(p,{mode:data.mode,apps:data.apps});return snapshot();
+    await engine.connect(p,{mode:data.mode,apps:data.apps,killSwitch:!!data.killSwitch});return snapshot();
   },true);
   handler('disconnect',async()=>{await engine.stop();return snapshot();},true);
+  handler('restore-network',restoreNetwork,true);
+  handler('copy-diagnostics',async()=>{if(engine.state.detail)clipboard.writeText(engine.state.error+'\n'+engine.state.detail);return true;});
   handler('window',async action=>{
     if(action==='minimize')window.minimize();else if(action==='close')window.hide();else if(action==='maximize'){if(window.isMaximized())window.unmaximize();else window.maximize();}
   });
@@ -89,10 +98,12 @@ function updateTray() {
   tray.setContextMenu(Menu.buildFromTemplate([
     {label:fa?'باز کردن آزادی':'Open Azadi Connect',click:()=>window.show()},
     {label:fa?'قطع اتصال':'Disconnect',enabled:!!engine.child,click:()=>engine.stop()},
-    {type:'separator'}, {label:fa?'خروج':'Quit',click:()=>app.quit()}
+    {label:fa?'بازیابی اینترنت مستقیم':'Restore direct Internet',enabled:!!engine.child||networkLock.state.active,click:()=>{const task=writeQueue.then(restoreNetwork);writeQueue=task.catch(()=>{});}},
+    {type:'separator'}, {label:fa?'خروج (حفظ قفل شبکه)':'Quit (keep network lock)',click:()=>app.quit()}
   ]));
 }
 app.whenReady().then(async()=>{
+  if(!ownsInstance)return;
   if(process.platform!=='win32' && !process.argv.includes('--ui-test')) { dialog.showErrorBox('Azadi Connect','This release supports Windows 10/11 x64.');app.quit();return; }
   if(process.platform==='win32') {
     try { await exec(systemExe('fltmc.exe'),[],{windowsHide:true,timeout:5000}); }
@@ -107,11 +118,16 @@ app.whenReady().then(async()=>{
       quitting=true;app.quit();return;
     }
   }
+  const coreDirectory=app.isPackaged?path.join(process.resourcesPath,'core'):path.join(__dirname,'../resources/core');
+  networkLock=new NetworkLock(coreDirectory,path.join(app.getPath('userData'),'private/runtime'));
+  if(process.argv.includes('--restore-network')){await networkLock.unlock();dialog.showMessageBoxSync({type:'info',title:'Azadi Connect',message:'Direct Internet restored. / اینترنت مستقیم بازیابی شد.'});quitting=true;app.quit();return;}
   vault=new Vault(path.join(app.getPath('userData'),'private'),safeStorage);
   await vault.initialize(); data=await vault.read();
   if(!Array.isArray(data.profiles)||!Array.isArray(data.apps))throw new AppError('storageError');
-  engine=new Engine(app.isPackaged?path.join(process.resourcesPath,'core'):path.join(__dirname,'../resources/core'),path.join(vault.directory,'runtime'));
-  await engine.initialize(); engine.on('state',notify);
+  engine=new Engine(coreDirectory,path.join(vault.directory,'runtime'),{networkLock});
+  await engine.initialize();
+  try{await networkLock.refresh();if(networkLock.state.active)data.killSwitch=true;}catch{networkLock.state={active:false,unknown:true,error:'killSwitchFailed'};}
+  engine.on('state',notify);engine.on('network-lock',notify);
   window=new BrowserWindow({width:1240,height:850,minWidth:980,minHeight:740,show:false,frame:false,backgroundColor:'#0b101d',
     title:'Azadi Connect',icon:path.join(__dirname,'../ui/assets/icon.png'),
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,devTools:!app.isPackaged}});

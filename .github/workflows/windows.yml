@@ -49,6 +49,8 @@ jobs:
         run: npm run check:engine
       - name: Native guardian lifecycle checks
         run: node scripts/guardian-smoke.cjs
+      - name: Native Wintun and persistent Kill Switch checks (disposable runner)
+        run: node scripts/network-lock-smoke.cjs
       - name: Build Windows x64 installer
         run: npx electron-builder --win nsis --x64 --publish never
       - name: Verify packaged manifest and integrity

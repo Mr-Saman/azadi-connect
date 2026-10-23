@@ -33,6 +33,8 @@ LangString CloseApp ${LANG_ENGLISH} "Please quit Azadi Connect from its tray men
 LangString CloseApp ${LANG_FARSI} "لطفاً پیش از نصب یا حذف، آزادی کانکت را از منوی کنار ساعت ویندوز ببندید."
 LangString Windows64 ${LANG_ENGLISH} "Azadi Connect requires 64-bit Windows 10 or later."
 LangString Windows64 ${LANG_FARSI} "آزادی کانکت به ویندوز ۱۰ یا جدیدتر، نسخهٔ ۶۴ بیتی، نیاز دارد."
+LangString RestoreFailed ${LANG_ENGLISH} "Network lock recovery failed. Files were preserved. Run Restore Internet from Start as administrator and try uninstalling again."
+LangString RestoreFailed ${LANG_FARSI} "بازیابی قفل شبکه انجام نشد. فایل‌ها حفظ شدند؛ بازیابی اینترنت را از منوی Start با دسترسی مدیر اجرا کنید."
 Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
   ${IfNot} ${RunningX64}
@@ -61,6 +63,7 @@ Section "Azadi Connect" MainSection
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\Azadi Connect"
   CreateShortcut "$SMPROGRAMS\Azadi Connect\Azadi Connect.lnk" "$INSTDIR\Azadi Connect.exe"
+  CreateShortcut "$SMPROGRAMS\Azadi Connect\Restore Internet.lnk" "$INSTDIR\Azadi Connect.exe" "--restore-network"
   CreateShortcut "$SMPROGRAMS\Azadi Connect\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortcut "$DESKTOP\Azadi Connect.lnk" "$INSTDIR\Azadi Connect.exe"
   WriteRegStr HKLM "Software\AzadiConnect" "InstallDir" "$INSTDIR"
@@ -85,12 +88,20 @@ FunctionEnd
 Section "Uninstall"
   SetRegView 64
   SetShellVarContext all
+  IfFileExists "$INSTDIR\resources\core\network-lock.exe" 0 NoNetworkLock
+  ExecWait '"$INSTDIR\resources\core\network-lock.exe" unlock' $0
+  ${If} $0 != 0
+    MessageBox MB_OK|MB_ICONSTOP "$(RestoreFailed)"
+    Abort
+  ${EndIf}
+  NoNetworkLock:
   !insertmacro RemoveAzadiFiles
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
   Delete "$DESKTOP\Azadi Connect.lnk"
   Delete "$SMPROGRAMS\Azadi Connect\Azadi Connect.lnk"
   Delete "$SMPROGRAMS\Azadi Connect\Uninstall.lnk"
+  Delete "$SMPROGRAMS\Azadi Connect\Restore Internet.lnk"
   RMDir "$SMPROGRAMS\Azadi Connect"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect"
   DeleteRegKey HKLM "Software\AzadiConnect"

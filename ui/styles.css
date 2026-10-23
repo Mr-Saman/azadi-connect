@@ -9,3 +9,7 @@ html[data-theme=light]{--bg:#f4f7fc;--side:#fff;--panel:#fff;--raised:#edf2f9;--
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 /* Keep the requested footer visible while individual pages scroll. */
 main{overflow:hidden}.topline{flex-shrink:0}.view.active{flex:1;min-height:0;overflow:auto;padding-bottom:9px}footer{flex-shrink:0;margin-top:0;border-top:1px solid var(--border);background:var(--bg);min-height:56px}
+
+.lock-banner{align-items:center;gap:12px}.lock-banner>div{flex:1;min-width:0}.lock-banner p{margin:4px 0 0;font-size:11px;line-height:1.9}.lock-banner .button{flex-shrink:0;max-width:220px;white-space:normal}
+.error-panel{padding:18px 22px;margin-bottom:18px;border-color:var(--red,#e16b83);flex-shrink:0}.error-panel>.muted{font-size:11px;margin:7px 0}.error-panel summary{cursor:pointer;color:var(--muted)}.error-panel pre{max-height:150px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.7 Inter,monospace;text-align:left;background:var(--bg);padding:12px;border-radius:9px}.error-panel .text-button{margin-top:10px}
+#kill-switch{width:42px;height:24px;accent-color:var(--teal);flex-shrink:0}

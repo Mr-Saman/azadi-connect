@@ -39,3 +39,28 @@ test('all language keys match and every page remains within the desktop width',a
  await page.setViewportSize({width:980,height:740});
  for(const name of ['dashboard','profiles','apps','settings']){await page.locator(`[data-page=${name}]`).click();expect(await page.evaluate(()=>document.body.scrollWidth<=innerWidth)).toBeTruthy();}
 });
+test('Kill Switch is optional and changing the preference alone does not claim an armed lock',async({page})=>{
+ await page.locator('[data-page=settings]').click();
+ await expect(page.locator('#kill-switch')).not.toBeChecked();
+ await page.locator('#kill-switch').check();
+ await expect(page.locator('#kill-switch')).toBeChecked();
+ await expect(page.locator('#network-lock-banner')).toBeHidden();
+ await page.screenshot({path:path.join(root,'docs/screenshots/kill-switch.png')});
+});
+test('engine details stay visible as text and persistent protection has explicit recovery',async({page})=>{
+ await page.evaluate(()=>{
+  const failed={version:'0.2.0',language:'en',theme:'dark',mode:'system',apps:[],profiles:[],encryption:true,killSwitch:true,networkLock:{active:true,complete:true,mode:'system'},connection:{status:'error',error:'coreFailed',detail:'stage=startup\nexit=23\nFATAL TUN unavailable <img src=x>'}};
+  window.azadi.connect=async()=>({ok:true,data:structuredClone(failed)});
+  window.azadi.copyDiagnostics=async()=>{window.copied=true;return {ok:true,data:true};};
+  window.azadi.restoreNetwork=async()=>({ok:true,data:{...failed,killSwitch:false,networkLock:{active:false},connection:{status:'disconnected'}}});
+ });
+ await page.locator('#connect').click();
+ await expect(page.locator('#connection-error')).toBeVisible();await expect(page.locator('#error-detail')).toContainText('exit=23');
+ await expect(page.locator('#error-detail')).toContainText('<img src=x>');expect(await page.locator('#error-detail img').count()).toBe(0);
+ await expect(page.locator('#error-message')).not.toContainText('kill switch');
+ await expect(page.locator('#network-lock-banner')).toBeVisible();await expect(page.locator('#mode-apps')).toBeDisabled();
+ await page.locator('#copy-diagnostics').click();expect(await page.evaluate(()=>window.copied)).toBeTruthy();
+ await page.screenshot({path:path.join(root,'docs/screenshots/diagnostics.png')});
+ await page.locator('#restore-network').click();await expect(page.locator('#network-lock-banner')).toBeHidden();
+ await expect(page.locator('#footer-status')).toHaveText('Direct internet');await expect(page.locator('#mode-apps')).toBeEnabled();
+});

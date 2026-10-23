@@ -12,5 +12,5 @@ assert.match(Buffer.from(manifest.bin).toString('utf8'),/requireAdministrator/);
 assert.ok(Resource.IconGroupEntry.fromEntries(res.entries).length,'Missing application icon');
 assert.ok(Resource.VersionInfo.fromEntries(res.entries).some(v=>v.getStringValues({lang:1033,codepage:1200}).ProductName==='Azadi Connect'),'Missing version branding');
 const core=path.join(directory,'resources/core');const meta=JSON.parse(await fs.readFile(path.join(core,'integrity.json'),'utf8'));
-for(const [file,expected]of [['sing-box.exe',meta.sha256],['guardian.exe',meta.guardianSha256]])assert.equal(crypto.createHash('sha256').update(await fs.readFile(path.join(core,file))).digest('hex'),expected);
+for(const [file,expected]of [['sing-box.exe',meta.sha256],['guardian.exe',meta.guardianSha256],['network-lock.exe',meta.networkLockSha256]])assert.equal(crypto.createHash('sha256').update(await fs.readFile(path.join(core,file))).digest('hex'),expected);
 console.log('PASS packaged Windows manifest, branding, icons and core hashes');
