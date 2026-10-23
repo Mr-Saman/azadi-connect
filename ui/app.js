@@ -49,7 +49,7 @@ function render(){
  $('connection-error').classList.toggle('hidden',!state.connection.error);
  $('error-message').textContent=t(state.connection.error||'error');$('error-detail').textContent=state.connection.detail||t('operationFailed');
  $('copy-diagnostics').disabled=!state.connection.detail;
- $('footer-status').textContent=t(active?'connected':protectedNetwork?(lock.mode==='system'?'lockedSystem':'lockedApps'):status==='error'?'error':'direct');$('vault-state').textContent=state.encryption?'DPAPI':'—';
+ $('footer-status').textContent=t(lock.unknown||lock.complete===false?'lockUnknown':active?'connected':protectedNetwork?(lock.mode==='system'?'lockedSystem':'lockedApps'):status==='error'?'error':'direct');$('vault-state').textContent=state.encryption?'DPAPI':'—';
  const select=$('profile-select');select.replaceChildren();const placeholder=el('option','',t('emptySelect'));placeholder.value='';select.append(placeholder);for(const p of state.profiles){const option=el('option','',p.name+' · '+p.protocol);option.value=p.id;select.append(option);}select.value=state.selectedId||'';select.disabled=locked;
  const selected=state.profiles.find(p=>p.id===state.selectedId);$('profile-info').textContent=selected?.server||'WireGuard · VLESS · Shadowsocks · OpenVPN';
  $('profile-info').title=selected?.protocol==='wireguard'?(state.language==='fa'?'محدودهٔ AllowedIPs حفظ می‌شود؛ دسترسی کامل اینترنت به سرور بستگی دارد.':'AllowedIPs are preserved; full internet access depends on your server.'):(selected?.notes||[]).join('\n');

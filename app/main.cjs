@@ -41,7 +41,7 @@ function queueRecovery() {
 }
 async function restoreNetwork() {
   await engine?.stop(); await networkLock.unlock();
-  if(data){data.killSwitch=false;return save();}
+  if(data){data.killSwitch=false;notify();return save();}
 }
 async function importRaw(raw,name,credentials) {
   idle(); const imported=importProfiles(raw,name,credentials || {});
