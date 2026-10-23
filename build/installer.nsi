@@ -10,7 +10,9 @@ Name "Azadi Connect"
 RequestExecutionLevel admin
 InstallDir "$PROGRAMFILES64\Azadi Connect"
 InstallDirRegKey HKLM "Software\AzadiConnect" "InstallDir"
-SetCompressor /SOLID lzma
+; Keep packaging within the pinned builder's four-minute makensis deadline.
+; Zlib is faster on shared runners than solid LZMA for the bundled engine.
+SetCompressor /SOLID /FINAL zlib
 ShowInstDetails show
 ShowUninstDetails show
 !define MUI_ABORTWARNING

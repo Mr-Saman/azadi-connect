@@ -34,3 +34,5 @@ No independent penetration test, code-signing certificate or zero-leak guarantee
 Live IPv6 traffic is exercised by the native script only if the runner has a usable public IPv6 route; otherwise the log explicitly records that limitation. IPv6 filters are installed in either case. This test intentionally changes routing/filtering on an ephemeral CI machine and refuses to run as a normal desktop test.
 
 The Linux editing sandbox denies netlink socket creation even without a TUN inbound. Runtime startup validation therefore runs on the Windows workflow; it is not reported as a successful Linux runtime test.
+
+Installer packaging uses solid zlib. The pinned builder enforces a four-minute NSIS compiler timeout; solid LZMA exceeded it on a shared Windows runner. The compressor change trades a larger installer for predictable build time.
