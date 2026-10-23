@@ -52,20 +52,24 @@ async function throughCore(port) {
 }
 (async()=>{
  directory=await fs.mkdtemp(path.join(os.tmpdir(),'azadi-network-smoke-'));
- const selected=path.join(directory,'selected.exe'),other=path.join(directory,'other.exe'),policy=path.join(directory,'scope.policy');
+ const selected=path.join(directory,'منتخب.exe'),other=path.join(directory,'other.exe'),policy=path.join(directory,'scope.policy');
  await fs.copyFile(path.join(root,'test-output/network-probe.exe'),selected);await fs.copyFile(selected,other);
  try{
    assert.equal((await invoke('status')).active,false,'Runner already has an Azadi policy; refuse to overwrite it');
    ownsPolicy=true;
    assert.ok(await probe(selected),'IPv4 baseline unavailable');console.log('PASS baseline physical IPv4');
    const ipv6='2606:4700:4700::1111',hasIPv6=await probe(selected,ipv6);
+   await fs.writeFile(policy,encodePolicy('apps',[selected]));await invoke('arm',policy);
+   assert.equal(await probe(selected),false,'Selected app was not blocked before tunnel startup');
+   assert.ok(await probe(other),'Unselected baseline was blocked');
+   console.log('PASS pre-start lock with canonical Unicode executable identity');
    // Isolated Wintun startup: no default route or DNS mutation.
    const tunneledProxy=await start(true);console.log('PASS isolated TUN startup');
    await ps("New-NetRoute -DestinationPrefix '1.1.1.1/32' -InterfaceAlias 'AzadiConnect' -NextHop '0.0.0.0' -RouteMetric 1 -PolicyStore ActiveStore -ErrorAction Stop | Out-Null");
    routeAdded=true;
    assert.ok(await throughCore(tunneledProxy),'Core transport failed with the isolated TUN route installed');
    assert.ok(await probe(selected),'Fixture traffic did not traverse the test TUN route');
-   await fs.writeFile(policy,encodePolicy('apps',[selected]));await invoke('arm',policy);
+   await invoke('arm',policy);
    assert.equal((await invoke('status')).complete,true);
    assert.ok(await probe(selected),'Kill Switch incorrectly blocked the TUN path');
    console.log('PASS Wintun + guardian startup and permitted TUN traffic');

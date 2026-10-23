@@ -173,7 +173,20 @@ static FWPM_FILTER_CONDITION0 condition(const GUID *field, FWP_DATA_TYPE type) {
 }
 static DWORD appRule(const GUID *layer,const wchar_t *file,FWP_ACTION_TYPE action,UINT64 weight) {
     FWP_BYTE_BLOB *appId=NULL;
-    DWORD code=check(FwpmGetAppIdFromFileName0(file,&appId),"application-identity");
+    /* ALE identifies the actual image path. Expand DOS 8.3 names and resolve
+       local junctions before obtaining its ID; otherwise a valid-looking
+       rule for RUNNER~1 (or a user's short path) never matches the process. */
+    wchar_t canonical[32768];
+    HANDLE image=CreateFileW(file,FILE_READ_ATTRIBUTES,
+        FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+    if(image==INVALID_HANDLE_VALUE)return check(GetLastError(),"application-file");
+    DWORD length=GetFinalPathNameByHandleW(image,canonical,32768,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+    DWORD error=length?ERROR_SUCCESS:GetLastError();CloseHandle(image);
+    if(!length || length>=32768)return check(error?error:ERROR_INSUFFICIENT_BUFFER,"application-path");
+    const wchar_t *normalized=!wcsncmp(canonical,L"\\\\?\\",4)?canonical+4:canonical;
+    if(wcslen(normalized)<3 || normalized[1]!=L':' || normalized[2]!=L'\\')
+        return check(ERROR_INVALID_NAME,"application-path");
+    DWORD code=check(FwpmGetAppIdFromFileName0(normalized,&appId),"application-identity");
     if(code)return code;
     FWPM_FILTER_CONDITION0 c=condition(&FWPM_CONDITION_ALE_APP_ID,FWP_BYTE_BLOB_TYPE);
     c.conditionValue.byteBlob=appId;
