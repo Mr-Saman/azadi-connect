@@ -1,6 +1,6 @@
 # Security · امنیت
 
-This is an early preview, not an audited privacy product. It has **no firewall kill switch**. Direct traffic may resume when the app/core closes or crashes. Executable matching depends on OS process discovery and is not a security boundary.
+This is an early preview, not an audited privacy product. An **optional persistent WFP Kill Switch** is available; it is off by default. When off, direct traffic may resume after the app/core closes. When armed, the application-owned filters remain until explicit recovery. Executable matching depends on OS process discovery and is not a security boundary.
 
 ## Implemented boundaries
 
@@ -14,6 +14,12 @@ This is an early preview, not an audited privacy product. It has **no firewall k
 - A native Windows Job Object guardian supervises the managed core; this does not guarantee zero route/DNS side effects on every Windows failure mode.
 - No telemetry, remote subscription fetching, account backend or automatic update channel.
 
+## Persistent Kill Switch boundaries
+
+See [KILL_SWITCH.md](docs/KILL_SWITCH.md). Both IP versions are filtered at outbound connect and inbound accept ALE layers. Only our provider/sublayer is changed. Rules are committed atomically; malformed policy input does not clear an existing lock. Loopback, the bundled engine, the actual TUN interface and narrowly defined DHCP/IPv6 neighbor discovery are exceptions. The engine needs physical access to establish the encrypted transport and bootstrap DNS.
+
+The lock is not protection against a local administrator, kernel compromise, disabled BFE, another product's privileged interception, early boot before BFE loads policy, or an unselected helper executable. App mode does not block DoH from an unselected process or prevent deliberate relaying through an unselected local proxy. Ordinary DNS ports 53/853 are protected globally in that mode. Real-device UDP/IPv6, existing-flow reauthorization, reboot and third-party firewall interoperability still require manual validation.
+
 ## Network limitations
 
 Ordinary DNS is tunneled for all apps during an active session, with direct bootstrap DNS for initial server resolution. Helper processes, existing sockets, unsupported upstream transports, IPv6 and VPN-server routes require real-device testing. No claim of perfect leak prevention, censorship resistance or anonymity is made. The startup test contacts `https://www.gstatic.com/generate_204` through the chosen VPN output to check connectivity.
@@ -26,6 +32,6 @@ Never post private keys, credentials, production profiles or unredacted traffic 
 
 ## فارسی
 
-این نسخه ممیزی امنیتی مستقل نشده و Kill Switch ندارد. توقف یا کرش می‌تواند اتصال مستقیم را برگرداند. پروفایل‌ها روی دیسک با DPAPI رمزگذاری می‌شوند، اما فایل موقت موتور هنگام اجرا متن ساده و دارای ACL محدود است. این فایل پس از خروج عادی یا اجرای بعدی پاک می‌شود و ممکن است پس از قطع برق باقی بماند. برنامه برای مدیریت تونل با دسترسی Administrator اجرا می‌شود.
+این نسخه ممیزی امنیتی مستقل نشده است. Kill Switch اختیاری و به‌صورت پیش‌فرض خاموش است؛ اگر روشن نباشد توقف موتور می‌تواند اینترنت مستقیم را برگرداند. اگر مسلح شده باشد، فیلترهای ویندوز تا بازیابی صریح باقی می‌مانند. پروفایل‌ها روی دیسک با DPAPI رمزگذاری می‌شوند، اما فایل موقت موتور هنگام اجرا متن ساده و دارای ACL محدود است. این فایل پس از خروج عادی یا اجرای بعدی پاک می‌شود و ممکن است پس از قطع برق باقی بماند. برنامه برای مدیریت تونل با دسترسی Administrator اجرا می‌شود.
 
 کلید خصوصی، رمز عبور، کانفیگ واقعی و لاگ حساس را در Issue عمومی منتشر نکن. آزمایش عملی IPv4/IPv6، DNS، پردازش‌های کمکی و رفتار قطع اتصال روی ویندوز ضروری است.

@@ -10,7 +10,7 @@
 
 🇮🇷 **برای ایران ❤️ · For Iran ❤️**
 
-**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.1.0 Preview**
+**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.2.0 Preview**
 
 [English guide](#english) · [راهنمای فارسی](#فارسی) · [Architecture](docs/ARCHITECTURE.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
@@ -32,7 +32,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 ### 🪟 Install on Windows
 
-1. Open this repository’s **Releases** page and download `Azadi-Connect-0.1.0-Windows-x64-Setup.exe` when attached to the release.
+1. Open this repository’s **Releases** page and download `Azadi-Connect-0.2.0-Windows-x64-Setup.exe` when attached to the release.
 2. Run the installer and accept the Windows Administrator/UAC request. The installer offers an installation directory and shortcuts.
 3. Open **Azadi Connect → Add profile**. Import your configuration, or paste a share link.
 4. Choose **Selected applications** and add the actual `.exe` paths, or choose **Entire system**.
@@ -70,7 +70,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 **DNS policy:** ordinary system DNS uses the tunnel in both modes. The engine’s initial server hostname resolution uses a direct bootstrap resolver (`1.1.1.1`). Other DNS uses a WireGuard profile’s first DNS IP, or Cloudflare DNS-over-TLS through the VPN. Applications with built-in DoH follow their own application route. This is not a promise of absolute leak prevention.
 
-**No kill switch:** direct connectivity may resume after an application/core crash or exit. The native guardian cleans up the managed child, but it is not a firewall kill switch. Process identification is not a strict security boundary. Local LAN destinations receive the same policy as other destinations; there is no hidden LAN bypass.
+**🛡️ Optional Kill Switch:** enable it in Settings before connecting. Persistent Windows Filtering Platform rules block direct traffic for the selected executables or the whole system. The lock stays after disconnect, quit or core/app failure. Use **Restore direct Internet**, the tray recovery action, or **Start → Azadi Connect → Restore Internet** to release it. App mode also protects ordinary DNS globally; unselected applications remain outside the app traffic scope. See the [scope and recovery guide](docs/KILL_SWITCH.md). This preview is not an independently audited privacy product.
 
 ### 💎 Included features
 
@@ -79,6 +79,8 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 - 🧭 Executable picker and a list of running Windows applications.
 - 🔒 DPAPI profile vault, restricted runtime directory ACLs and pinned engine integrity checks.
 - 🛡️ Sandboxed renderer, narrow IPC bridge, denied navigation and remote network requests.
+- 🛡️ Optional persistent Kill Switch with explicit Internet recovery.
+- 🩺 Persistent, copyable connection diagnostics with credential redaction.
 - 💓 Actual outbound connectivity check before showing a verified connection.
 - 📊 Session upload/download totals, latency and connection duration.
 - 🪟 Tray menu, single-instance behavior and orderly disconnect on Quit.
@@ -106,7 +108,7 @@ To create the installable Windows EXE:
 npm run build:win
 ```
 
-Output: `dist/Azadi-Connect-0.1.0-Windows-x64-Setup.exe`.
+Output: `dist/Azadi-Connect-0.2.0-Windows-x64-Setup.exe`.
 
 The download script pins **sing-box 1.14.3** and its official archive SHA-256. It never silently selects “latest.” The native guardian is compiled from the included C source, then its hash is recorded. The application rechecks both binaries before connecting. Installer branding, version information and the Administrator manifest are embedded with a JavaScript PE resource editor; Wine is not required for packaging on Linux.
 
@@ -119,7 +121,7 @@ npm run test:ui
 
 ### 🚀 Releases & development history
 
-The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs unit tests, builds the native guardian, validates supported generated configurations, checks guardian lifecycle behavior, builds the installer and attaches artifacts. On a published `v0.1.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
+The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 21 unit checks and 7 UI checks, compiles both native helpers, validates 22 generated configurations, and exercises Wintun traffic, core crash, persistent per-app/system filtering and explicit recovery on a disposable Windows runner before packaging. On a published `v0.2.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
 
 The initial implementation is developed in separate commits for the protocol core, desktop UI, validation, documentation and release packaging. Release binaries are generated from the checked-out commit, not committed into Git history.
 
@@ -139,7 +141,7 @@ The initial implementation is developed in separate commits for the protocol cor
 
 ### 🪟 روش نصب و استفاده
 
-۱. از بخش **Releases** فایل `Azadi-Connect-0.1.0-Windows-x64-Setup.exe` را، پس از پیوست‌شدن به نسخه، دریافت کن.
+۱. از بخش **Releases** فایل `Azadi-Connect-0.2.0-Windows-x64-Setup.exe` را، پس از پیوست‌شدن به نسخه، دریافت کن.
 
 ۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد.
 
@@ -176,7 +178,7 @@ The initial implementation is developed in separate commits for the protocol cor
 
 **سیاست DNS:** هنگام اتصال، DNS معمولی سیستم حتی در حالت انتخاب برنامه‌ها از VPN می‌گذرد. یافتن اولیهٔ آدرس سرور از DNS مستقیم `1.1.1.1` استفاده می‌کند. سپس اولین DNS عددی WireGuard یا Cloudflare DNS-over-TLS از داخل VPN به کار می‌رود. DoH داخلی هر برنامه تابع مسیر همان برنامه است.
 
-**محدودیت مهم نسخهٔ اولیه:** Kill Switch پیاده‌سازی نشده است. با توقف یا کرش برنامه یا موتور، اینترنت مستقیم می‌تواند برقرار شود. محافظ فرایند ویندوز برای جمع‌کردن موتور است و جای فایروال را نمی‌گیرد. برای جلوگیری قطعی از نشت ترافیک به این نسخه اتکا نکن. مسیریابی برنامه‌ها هم مرز امنیتی قطعی نیست.
+**🛡️ Kill Switch اختیاری:** پیش از اتصال آن را در تنظیمات روشن کن. فیلتر پایدار ویندوز، مسیر مستقیم برنامه‌های منتخب یا کل سیستم را می‌بندد و پس از قطع VPN، خروج یا کرش باقی می‌ماند. برای آزادکردن آن **بازیابی اینترنت مستقیم** را در برنامه یا منوی کنار ساعت بزن؛ میانبر **Start → Azadi Connect → Restore Internet** نیز مستقل از گاوصندوق پروفایل‌ها کار می‌کند. در حالت برنامه‌ها، DNS معمولی کل سیستم نیز محافظت می‌شود. [راهنمای محدودهٔ محافظت و بازیابی](docs/KILL_SWITCH.md) را بخوان. نسخه همچنان اولیه و فاقد ممیزی امنیتی مستقل است.
 
 ### 🛠️ راه‌اندازی سورس
 
@@ -216,3 +218,16 @@ npm run build:win
 Built with ChatGPT. Shared as open source. 🌱
 
 </div>
+
+
+### 🩺 Connection errors · خطای اتصال
+
+The old “engine stopped; no kill switch” message combined two unrelated facts. A missing Kill Switch never blocked connection. Version 0.2 shows a persistent error card with the failure stage, process exit code and redacted engine output. Copy the details after reviewing them; never post a VPN profile or private key in an issue. A real-provider failure still needs its actual diagnostic output.
+
+پیام قبلیِ «توقف موتور و نبود Kill Switch» گمراه‌کننده بود؛ نبود این قابلیت مانع اتصال نبود. از نسخهٔ ۰٫۲، مرحلهٔ خطا، کد خروج و خروجی پاک‌سازی‌شدهٔ موتور در کارت خطا دیده و کپی می‌شود. قبل از ارسال، متن را مرور کن؛ فایل کانفیگ و کلید خصوصی را در Issue عمومی نگذار.
+
+### ✍️ Public code signing · امضای معتبر ویندوز
+
+This release remains **unsigned**. Code signing verifies publisher identity and file integrity; it does not repair a VPN connection. See the bilingual [signing guide](docs/CODE_SIGNING.md) for identity validation, country eligibility, OV/EV differences and the changes needed in this build pipeline.
+
+این نسخه هنوز **امضای تجاری ندارد**. امضا، هویت ناشر و دست‌نخوردن فایل را بررسی‌پذیر می‌کند و درمان خطای اتصال VPN نیست. [راهنمای دو زبانهٔ امضا](docs/CODE_SIGNING.md) روش دریافت، محدودیت کشورها و تفاوت OV و EV را توضیح می‌دهد.
