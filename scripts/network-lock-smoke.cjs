@@ -63,6 +63,17 @@ async function throughCore(port) {
    assert.equal(await probe(selected),false,'Selected app was not blocked before tunnel startup');
    assert.ok(await probe(other),'Unselected baseline was blocked');
    console.log('PASS pre-start lock with canonical Unicode executable identity');
+   // Simulate the installer's staged new helper while the installed service
+   // owns its EXE. Upgrade may stop our service, but must not release WFP rules.
+   const upgradeHelper=path.join(directory,'upgrade-helper.exe');
+   await fs.copyFile(helper,upgradeHelper);
+   const beforeUpgrade=await invoke('status');
+   await exec(upgradeHelper,['prepare-upgrade'],{timeout:20000,windowsHide:true});
+   assert.deepEqual(await invoke('status'),beforeUpgrade,'Upgrade changed persistent protection');
+   assert.equal(await probe(selected),false,'Upgrade released the selected-app lock');
+   assert.ok(await probe(other),'Upgrade blocked the unrelated application');
+   await fs.copyFile(upgradeHelper,helper); // fails if the service EXE is still mapped
+   console.log('PASS staged helper upgrade replaces its EXE and preserves active WFP protection');
    // Isolated Wintun startup: no default route or DNS mutation.
    const tunneledProxy=await start(true);console.log('PASS isolated TUN startup');
    await ps("New-NetRoute -DestinationPrefix '1.1.1.1/32' -InterfaceAlias 'AzadiConnect' -NextHop '0.0.0.0' -RouteMetric 1 -PolicyStore ActiveStore -ErrorAction Stop | Out-Null");

@@ -35,6 +35,8 @@ LangString Windows64 ${LANG_ENGLISH} "Azadi Connect requires 64-bit Windows 10 o
 LangString Windows64 ${LANG_FARSI} "آزادی کانکت به ویندوز ۱۰ یا جدیدتر، نسخهٔ ۶۴ بیتی، نیاز دارد."
 LangString RestoreFailed ${LANG_ENGLISH} "Network lock recovery failed. Files were preserved. Run Restore Internet from Start as administrator and try uninstalling again."
 LangString RestoreFailed ${LANG_FARSI} "بازیابی قفل شبکه انجام نشد. فایل‌ها حفظ شدند؛ بازیابی اینترنت را از منوی Start با دسترسی مدیر اجرا کنید."
+LangString UpgradeFailed ${LANG_ENGLISH} "The network lock service could not be stopped for upgrade. Existing files were preserved. Restart Windows and try installing again."
+LangString UpgradeFailed ${LANG_FARSI} "توقف سرویس محافظت برای ارتقا انجام نشد؛ فایل‌های قبلی حفظ شدند. ویندوز را دوباره راه‌اندازی و نصب را تکرار کنید."
 Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
   ${IfNot} ${RunningX64}
@@ -58,6 +60,22 @@ FunctionEnd
 Section "Azadi Connect" MainSection
   SetRegView 64
   SetShellVarContext all
+  ; Use the new helper from a private installer directory, since the installed
+  ; 0.2 helper does not implement this command and may itself be running.
+  InitPluginsDir
+  SetOutPath "$PLUGINSDIR"
+  File /oname=azadi-network-upgrade.exe "${PROJECT_DIR}\dist\win-unpacked\resources\core\network-lock.exe"
+  ClearErrors
+  ExecWait '"$PLUGINSDIR\azadi-network-upgrade.exe" prepare-upgrade' $0
+  IfErrors UpgradeFailed
+  ${If} $0 != 0
+    Goto UpgradeFailed
+  ${EndIf}
+  Goto UpgradeReady
+  UpgradeFailed:
+    MessageBox MB_OK|MB_ICONSTOP "$(UpgradeFailed)"
+    Abort
+  UpgradeReady:
   SetOutPath "$INSTDIR"
   File /r "${PROJECT_DIR}\dist\win-unpacked\*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"

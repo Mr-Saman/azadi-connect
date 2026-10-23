@@ -2,6 +2,7 @@
 
 ## 0.3.0 — Preview
 
+- Safely stop the existing network-lock service during upgrades without unlocking its persistent policy; wait for process exit before replacing its executable.
 - Fix sing-box 1.14 startup failure: remove the redundant empty-direct DNS detour and deprecated `independent_cache` setting.
 - Execute generated DNS settings in a real core-startup regression test, in both routing modes with TLS/profile DNS.
 - Fit the overview to the minimum desktop size; keep header/footer fixed and scroll long content within one pane.

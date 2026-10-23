@@ -46,6 +46,8 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 **Release status:** this is an unsigned preview. Windows can display an unknown-publisher notice. The source and SHA-256 checksums are provided for inspection; there is no claim of independent security auditing. Windows routing, DNS and real-provider compatibility still require testing on your own device. An existing WireGuard/OpenVPN client is not required for supported imports; the engine is bundled.
 
+**Upgrading from 0.2:** quit the application from its tray menu, then run the new installer. It stops only Azadi’s network-lock service before replacing files; persistent filters remain until you explicitly restore direct Internet or reconnect.
+
 ### 🧩 Supported imports
 
 | Protocol / format | Import | Selected apps | Entire system | Scope |
@@ -164,6 +166,8 @@ The initial implementation is developed in separate commits for the protocol cor
 ۵. روی **اتصال** بزن. وضعیت متصل زمانی نمایش داده می‌شود که درخواست آزمایشی از خروجی VPN موفق باشد.
 
 🔐 پروفایل‌ها با حساب فعلی ویندوز و DPAPI رمزگذاری می‌شوند. کانفیگ‌ها و کلیدهای واقعی وارد سورس، گیت‌هاب یا سرور دیگری نمی‌شوند. برنامه سرور رایگان یا حساب VPN ارائه نمی‌کند و به یک کانفیگ معتبر از ارائه‌دهندهٔ خودت نیاز دارد.
+
+**ارتقا از ۰٫۲:** ابتدا برنامه را از منوی کنار ساعت ببند و نصب‌کنندهٔ جدید را اجرا کن. نصب‌کننده پیش از جایگزینی فایل‌ها فقط سرویس محافظت آزادی را متوقف می‌کند؛ قفل شبکه تا بازیابی صریح اینترنت یا اتصال دوباره باقی می‌ماند.
 
 ### 🧩 فرمت‌ها و قابلیت‌ها
 

@@ -89,24 +89,52 @@ done:
     if(service)CloseServiceHandle(service);
     CloseServiceHandle(manager);return code;
 }
-static DWORD removeService(void) {
+/* Upgrade stops only our service: persistent WFP rules and the automatic
+   service registration remain. Wait for process exit before replacing its EXE. */
+static DWORD stopService(BOOL remove) {
     SC_HANDLE manager=OpenSCManagerW(NULL,NULL,SC_MANAGER_CONNECT);
     if(!manager)return check(GetLastError(),"service-manager");
-    SC_HANDLE service=OpenServiceW(manager,serviceName,SERVICE_STOP|SERVICE_QUERY_STATUS|DELETE);
-    DWORD code=NO_ERROR;
+    SC_HANDLE service=OpenServiceW(manager,serviceName,SERVICE_STOP|SERVICE_QUERY_STATUS|(remove?DELETE:0));
+    DWORD code=NO_ERROR;HANDLE process=NULL;
     if(!service) {
         DWORD error=GetLastError();
         if(error!=ERROR_SERVICE_DOES_NOT_EXIST)code=check(error,"service-open");
     } else {
-        SERVICE_STATUS status={0};
-        if(!ControlService(service,SERVICE_CONTROL_STOP,&status) && GetLastError()!=ERROR_SERVICE_NOT_ACTIVE)
-            code=check(GetLastError(),"service-stop");
-        if(!code) {
-            for(int i=0;i<50;i++){if(!QueryServiceStatus(service,&status)||status.dwCurrentState==SERVICE_STOPPED)break;Sleep(100);}
-            if(!DeleteService(service)&&GetLastError()!=ERROR_SERVICE_MARKED_FOR_DELETE)code=check(GetLastError(),"service-delete");
+        SERVICE_STATUS_PROCESS status={0};DWORD needed=0;
+        if(!QueryServiceStatusEx(service,SC_STATUS_PROCESS_INFO,(BYTE*)&status,sizeof(status),&needed)) {
+            code=check(GetLastError(),"service-status");goto done;
         }
-        CloseServiceHandle(service);
+        if(status.dwProcessId) {
+            process=OpenProcess(SYNCHRONIZE,FALSE,status.dwProcessId);
+            if(!process && GetLastError()!=ERROR_INVALID_PARAMETER) {
+                code=check(GetLastError(),"service-process");goto done;
+            }
+        }
+        if(status.dwCurrentState!=SERVICE_STOPPED && status.dwCurrentState!=SERVICE_STOP_PENDING) {
+            SERVICE_STATUS stopped={0};
+            if(!ControlService(service,SERVICE_CONTROL_STOP,&stopped) && GetLastError()!=ERROR_SERVICE_NOT_ACTIVE) {
+                code=check(GetLastError(),"service-stop");goto done;
+            }
+        }
+        for(int i=0;i<100;i++) {
+            if(!QueryServiceStatusEx(service,SC_STATUS_PROCESS_INFO,(BYTE*)&status,sizeof(status),&needed)) {
+                code=check(GetLastError(),"service-status");goto done;
+            }
+            if(status.dwCurrentState==SERVICE_STOPPED)break;
+            Sleep(100);
+        }
+        if(status.dwCurrentState!=SERVICE_STOPPED) {
+            code=check(ERROR_SERVICE_REQUEST_TIMEOUT,"service-stop-timeout");goto done;
+        }
+        if(process && WaitForSingleObject(process,5000)!=WAIT_OBJECT_0) {
+            code=check(ERROR_TIMEOUT,"service-process-exit");goto done;
+        }
+        if(remove && !DeleteService(service) && GetLastError()!=ERROR_SERVICE_MARKED_FOR_DELETE)
+            code=check(GetLastError(),"service-delete");
     }
+done:
+    if(process)CloseHandle(process);
+    if(service)CloseServiceHandle(service);
     CloseServiceHandle(manager);return code;
 }
 static DWORD listFilters(BOOL remove, UINT32 *count, UINT64 *policy) {
@@ -305,6 +333,12 @@ int wmain(int argc,wchar_t **argv) {
         SERVICE_TABLE_ENTRYW table[]={{(wchar_t*)serviceName,policyService},{NULL,NULL}};
         return StartServiceCtrlDispatcherW(table)?0:1;
     }
+    if(!wcscmp(argv[1],L"prepare-upgrade")) {
+        DWORD code=stopService(FALSE);
+        if(!code)puts("{\"serviceStopped\":true}");
+        else fprintf(stderr,"network-lock: %s failed (Windows code 0x%08lX)\n",lastStage,lastCode);
+        return code?1:0;
+    }
     FWPM_SESSION0 session={0};session.displayData.name=L"Azadi Connect policy manager";
     DWORD code=check(FwpmEngineOpen0(NULL,RPC_C_AUTHN_WINNT,NULL,&session,&engine),"open-wfp");
     if(!code) {
@@ -319,7 +353,7 @@ int wmain(int argc,wchar_t **argv) {
                 else code=check(FwpmTransactionCommit0(engine),"unlock-commit");
             }
             if(!code && !wcscmp(argv[1],L"uninstall")) {
-                code=removeService();
+                code=stopService(TRUE);
                 if(!code) {
                     DWORD removed=FwpmSubLayerDeleteByKey0(engine,&sublayerKey);
                     if(removed!=(DWORD)FWP_E_SUBLAYER_NOT_FOUND)code=check(removed,"sublayer-delete");
