@@ -16,7 +16,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const ps=script=>exec(powershell,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{timeout:15000,windowsHide:true});
 const invoke=async(...args)=>JSON.parse((await exec(helper,args,{timeout:20000,windowsHide:true})).stdout);
 const probe=async(file,ip='1.1.1.1')=>{try{await exec(file,[ip],{timeout:5000,windowsHide:true});return true;}catch{return false;}};
-let child,routeAdded=false,directory;
+let child,routeAdded=false,directory,ownsPolicy=false;
 async function stop() {
  if(!child)return;const p=child;child=null;
  const exit=new Promise(r=>p.once('close',r));
@@ -56,6 +56,7 @@ async function throughCore(port) {
  await fs.copyFile(path.join(root,'test-output/network-probe.exe'),selected);await fs.copyFile(selected,other);
  try{
    assert.equal((await invoke('status')).active,false,'Runner already has an Azadi policy; refuse to overwrite it');
+   ownsPolicy=true;
    assert.ok(await probe(selected),'IPv4 baseline unavailable');
    const ipv6='2606:4700:4700::1111',hasIPv6=await probe(selected,ipv6);
    // Isolated Wintun startup: no default route or DNS mutation.
@@ -87,7 +88,7 @@ async function throughCore(port) {
    assert.ok(await throughCore(proxyPort),'Engine exception or loopback control was blocked');
    console.log('PASS full-system physical block and engine-only transport exception');
  }finally{
-   await invoke('unlock');assert.equal((await invoke('status')).active,false);
+   if(ownsPolicy){await invoke('unlock');assert.equal((await invoke('status')).active,false);}
    await stop();
    if(routeAdded)await ps("Get-NetRoute -DestinationPrefix '1.1.1.1/32' -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceAlias -eq 'AzadiConnect' } | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue");
  }
