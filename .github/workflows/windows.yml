@@ -47,6 +47,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Check 22 generated protocol and route configurations
         run: npm run check:engine
+      - name: Start generated configurations and initialize real DNS transports
+        run: node scripts/startup-smoke.cjs
       - name: Native guardian lifecycle checks
         run: node scripts/guardian-smoke.cjs
       - name: Native Wintun and persistent Kill Switch checks (disposable runner)

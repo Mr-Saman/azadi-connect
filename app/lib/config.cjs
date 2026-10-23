@@ -21,10 +21,12 @@ function buildConfig(profile, options, controller) {
     log: { level: 'warn', timestamp: false },
     dns: {
       servers: [
-        { type: 'udp', tag: 'bootstrap', server: '1.1.1.1', server_port: 53, detour: 'direct' },
+        // Modern DNS transports dial directly by default. An explicit detour to
+        // an empty direct outbound is rejected at runtime by sing-box 1.14.
+        { type: 'udp', tag: 'bootstrap', server: '1.1.1.1', server_port: 53 },
         { type: 'tls', tag: 'secure-dns', server: '1.1.1.1', server_port: 853, tls: { enabled: true, server_name: 'cloudflare-dns.com' }, detour: 'vpn' }
       ],
-      final: 'secure-dns', strategy: 'prefer_ipv4', independent_cache: true
+      final: 'secure-dns', strategy: 'prefer_ipv4'
     },
     inbounds: [{ type: 'tun', tag: 'azadi-tun', interface_name: 'AzadiConnect',
       address: ['172.29.215.1/30','fd72:98c4:51af::1/126'], mtu: 1400,
