@@ -35,36 +35,42 @@ static DWORD check(DWORD code, const char *stage) {
 }
 static DWORD listFilters(BOOL remove, UINT32 *count, UINT64 *policy) {
     FWPM_FILTER_ENUM_TEMPLATE0 query={0};
-    HANDLE enumeration=NULL;
     *count=0; *policy=0;
     FWPM_PROVIDER0 *provider=NULL;
-    DWORD present=FwpmProviderGetByKey0(engine,&providerKey,&provider);
-    if(present==(DWORD)FWP_E_PROVIDER_NOT_FOUND)return ERROR_SUCCESS;
-    if(present)return check(present,"provider-status");
+    DWORD code=FwpmProviderGetByKey0(engine,&providerKey,&provider);
+    if(code==(DWORD)FWP_E_PROVIDER_NOT_FOUND)return ERROR_SUCCESS;
+    if(code)return check(code,"provider-status");
     FwpmFreeMemory0((void**)&provider);
     query.providerKey=(GUID*)&providerKey;
     query.enumType=FWP_FILTER_ENUM_FULLY_CONTAINED;
     query.actionMask=0xFFFFFFFF;
     query.flags=FWP_FILTER_ENUM_FLAG_INCLUDE_DISABLED;
-    DWORD code=check(FwpmFilterCreateEnumHandle0(engine,&query,&enumeration),"enumerate-create");
-    if(code)return code;
-    for(;;) {
-        FWPM_FILTER0 **entries=NULL; UINT32 size=0;
-        code=check(FwpmFilterEnum0(engine,enumeration,128,&entries,&size),"enumerate");
-        if(code)break;
-        for(UINT32 i=0;i<size;i++) {
-            if(!IsEqualGUID(&entries[i]->subLayerKey,&sublayerKey))continue;
-            if(*count==0)*policy=entries[i]->rawContext;
-            else if(*policy!=entries[i]->rawContext)*policy=0;
-            if(entries[i]->flags & FWPM_FILTER_FLAG_DISABLED)*policy=0;
-            (*count)++;
-            if(remove && (code=check(FwpmFilterDeleteById0(engine,entries[i]->filterId),"delete-owned-filter")))break;
+    /* A non-NULL enumeration template requires a concrete layer GUID.
+       Enumerate our four ALE layers individually, never unrelated policies. */
+    for(UINT32 layer=0;layer<4;layer++) {
+        HANDLE enumeration=NULL;
+        query.layerKey=*layers[layer];
+        code=check(FwpmFilterCreateEnumHandle0(engine,&query,&enumeration),"enumerate-create");
+        if(code)return code;
+        for(;;) {
+            FWPM_FILTER0 **entries=NULL;UINT32 size=0;
+            code=check(FwpmFilterEnum0(engine,enumeration,128,&entries,&size),"enumerate");
+            if(code)break;
+            for(UINT32 i=0;i<size;i++) {
+                if(!IsEqualGUID(&entries[i]->subLayerKey,&sublayerKey))continue;
+                if(*count==0)*policy=entries[i]->rawContext;
+                else if(*policy!=entries[i]->rawContext)*policy=0;
+                if(entries[i]->flags & FWPM_FILTER_FLAG_DISABLED)*policy=0;
+                (*count)++;
+                if(remove && (code=check(FwpmFilterDeleteById0(engine,entries[i]->filterId),"delete-owned-filter")))break;
+            }
+            FwpmFreeMemory0((void**)&entries);
+            if(code || size<128)break;
         }
-        FwpmFreeMemory0((void**)&entries);
-        if(code || size<128)break;
+        FwpmFilterDestroyEnumHandle0(engine,enumeration);
+        if(code)return code;
     }
-    FwpmFilterDestroyEnumHandle0(engine,enumeration);
-    return code;
+    return ERROR_SUCCESS;
 }
 static DWORD addFilter(const GUID *layer, FWP_ACTION_TYPE action, UINT64 weight,
         FWPM_FILTER_CONDITION0 *conditions, UINT32 count, const wchar_t *name) {
