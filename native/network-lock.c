@@ -14,6 +14,7 @@
 #include <windows.h>
 #include <initguid.h>
 #include <fwpmu.h>
+#include <iphlpapi.h>
 #include <netioapi.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -117,6 +118,7 @@ static DWORD arm(UINT32 mode,UINT32 count,wchar_t **apps) {
     wchar_t core[32768],svchost[MAX_PATH];DWORD n=GetModuleFileNameW(NULL,core,32768);
     if(!n || n>=32768)return check(ERROR_INSUFFICIENT_BUFFER,"engine-path");
     wchar_t *slash=wcsrchr(core,L'\\');if(!slash)return check(ERROR_INVALID_NAME,"engine-path");
+    if((size_t)(slash-core)+14>=32768)return check(ERROR_INSUFFICIENT_BUFFER,"engine-path");
     wcscpy(slash+1,L"sing-box.exe");
     n=GetSystemDirectoryW(svchost,MAX_PATH);
     if(!n || n>MAX_PATH-14)return check(ERROR_INVALID_NAME,"system-path");
