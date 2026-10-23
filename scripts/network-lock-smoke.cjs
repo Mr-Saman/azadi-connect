@@ -89,7 +89,7 @@ async function throughCore(port) {
    assert.ok(await throughCore(proxyPort),'Engine exception or loopback control was blocked');
    console.log('PASS full-system physical block and engine-only transport exception');
  }catch(e){console.error('Native network test failed: '+e.message+'\nCore log:\n'+coreLogs);throw e;}finally{
-   if(ownsPolicy){await invoke('unlock');assert.equal((await invoke('status')).active,false);}
+   if(ownsPolicy){await invoke('uninstall');assert.equal((await invoke('status')).active,false);}
    await stop();
    if(routeAdded)await ps("Get-NetRoute -DestinationPrefix '1.1.1.1/32' -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceAlias -eq 'AzadiConnect' } | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue");
  }

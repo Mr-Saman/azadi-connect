@@ -29,9 +29,85 @@ static HANDLE engine;
 static UINT64 context;
 static DWORD lastCode;
 static const char *lastStage = "initialization";
+static const wchar_t serviceName[]=L"AzadiConnectNetworkLock";
+static SERVICE_STATUS_HANDLE statusHandle;
+static HANDLE serviceStop;
+static SERVICE_STATUS serviceStatus;
+static void reportService(DWORD state) {
+    serviceStatus.dwServiceType=SERVICE_WIN32_OWN_PROCESS;
+    serviceStatus.dwCurrentState=state;
+    serviceStatus.dwControlsAccepted=state==SERVICE_RUNNING?SERVICE_ACCEPT_STOP|SERVICE_ACCEPT_SHUTDOWN:0;
+    serviceStatus.dwWin32ExitCode=NO_ERROR;
+    SetServiceStatus(statusHandle,&serviceStatus);
+}
+static DWORD WINAPI controlService(DWORD control,DWORD type,void *event,void *context) {
+    (void)type;(void)event;(void)context;
+    if(control==SERVICE_CONTROL_STOP || control==SERVICE_CONTROL_SHUTDOWN) {
+        reportService(SERVICE_STOP_PENDING);SetEvent(serviceStop);
+    }
+    return NO_ERROR;
+}
+static void WINAPI policyService(DWORD argc,wchar_t **argv) {
+    (void)argc;(void)argv;
+    serviceStop=CreateEventW(NULL,TRUE,FALSE,NULL);
+    statusHandle=RegisterServiceCtrlHandlerExW(serviceName,controlService,NULL);
+    if(!statusHandle){if(serviceStop)CloseHandle(serviceStop);return;}
+    if(!serviceStop){serviceStatus.dwWin32ExitCode=ERROR_OUTOFMEMORY;reportService(SERVICE_STOPPED);return;}
+    reportService(SERVICE_RUNNING);
+    WaitForSingleObject(serviceStop,INFINITE);CloseHandle(serviceStop);
+    reportService(SERVICE_STOPPED);
+}
 static DWORD check(DWORD code, const char *stage) {
     if (code) { lastCode=code; lastStage=stage; }
     return code;
+}
+static DWORD ensureService(void) {
+    wchar_t file[32768],command[32780];
+    DWORD length=GetModuleFileNameW(NULL,file,32768);
+    if(!length || length>=32768)return check(ERROR_INSUFFICIENT_BUFFER,"service-path");
+    swprintf(command,32780,L"\"%ls\" service",file);
+    SC_HANDLE manager=OpenSCManagerW(NULL,NULL,SC_MANAGER_CONNECT|SC_MANAGER_CREATE_SERVICE);
+    if(!manager)return check(GetLastError(),"service-manager");
+    SC_HANDLE service=OpenServiceW(manager,serviceName,SERVICE_CHANGE_CONFIG|SERVICE_QUERY_STATUS|SERVICE_START);
+    DWORD code=NO_ERROR;
+    if(!service && GetLastError()==ERROR_SERVICE_DOES_NOT_EXIST) {
+        service=CreateServiceW(manager,serviceName,L"Azadi Connect Network Lock",
+            SERVICE_CHANGE_CONFIG|SERVICE_QUERY_STATUS|SERVICE_START,
+            SERVICE_WIN32_OWN_PROCESS,SERVICE_AUTO_START,SERVICE_ERROR_NORMAL,
+            command,NULL,NULL,L"BFE\0",L"NT AUTHORITY\\LocalService",NULL);
+    }
+    if(!service){code=check(GetLastError(),"service-create");goto done;}
+    if(!ChangeServiceConfigW(service,SERVICE_NO_CHANGE,SERVICE_AUTO_START,SERVICE_NO_CHANGE,
+        command,NULL,NULL,L"BFE\0",NULL,NULL,NULL)){code=check(GetLastError(),"service-config");goto done;}
+    /* BFE disables a persistent provider's filters on restart unless its
+       associated Windows service is configured for automatic startup. */
+    if(!StartServiceW(service,0,NULL)) {
+        DWORD error=GetLastError();
+        if(error!=ERROR_SERVICE_ALREADY_RUNNING){code=check(error,"service-start");goto done;}
+    }
+done:
+    if(service)CloseServiceHandle(service);
+    CloseServiceHandle(manager);return code;
+}
+static DWORD removeService(void) {
+    SC_HANDLE manager=OpenSCManagerW(NULL,NULL,SC_MANAGER_CONNECT);
+    if(!manager)return check(GetLastError(),"service-manager");
+    SC_HANDLE service=OpenServiceW(manager,serviceName,SERVICE_STOP|SERVICE_QUERY_STATUS|DELETE);
+    DWORD code=NO_ERROR;
+    if(!service) {
+        DWORD error=GetLastError();
+        if(error!=ERROR_SERVICE_DOES_NOT_EXIST)code=check(error,"service-open");
+    } else {
+        SERVICE_STATUS status={0};
+        if(!ControlService(service,SERVICE_CONTROL_STOP,&status) && GetLastError()!=ERROR_SERVICE_NOT_ACTIVE)
+            code=check(GetLastError(),"service-stop");
+        if(!code) {
+            for(int i=0;i<50;i++){if(!QueryServiceStatus(service,&status)||status.dwCurrentState==SERVICE_STOPPED)break;Sleep(100);}
+            if(!DeleteService(service)&&GetLastError()!=ERROR_SERVICE_MARKED_FOR_DELETE)code=check(GetLastError(),"service-delete");
+        }
+        CloseServiceHandle(service);
+    }
+    CloseServiceHandle(manager);return code;
 }
 static DWORD listFilters(BOOL remove, UINT32 *count, UINT64 *policy) {
     FWPM_FILTER_ENUM_TEMPLATE0 query={0};
@@ -136,6 +212,7 @@ done:
     free(bytes);return check(code,"policy-parse");
 }
 static DWORD arm(UINT32 mode,UINT32 count,wchar_t **apps) {
+    DWORD serviceCode=ensureService();if(serviceCode)return serviceCode;
     wchar_t core[32768],svchost[MAX_PATH];DWORD n=GetModuleFileNameW(NULL,core,32768);
     if(!n || n>=32768)return check(ERROR_INSUFFICIENT_BUFFER,"engine-path");
     wchar_t *slash=wcsrchr(core,L'\\');if(!slash)return check(ERROR_INVALID_NAME,"engine-path");
@@ -154,6 +231,7 @@ static DWORD arm(UINT32 mode,UINT32 count,wchar_t **apps) {
     if(code)return code;
     FWPM_PROVIDER0 provider={0};provider.providerKey=providerKey;
     provider.displayData.name=L"Azadi Connect network lock";provider.flags=FWPM_PROVIDER_FLAG_PERSISTENT;
+    provider.serviceName=(wchar_t*)serviceName;
     code=FwpmProviderAdd0(engine,&provider,NULL);
     if(code && code!=FWP_E_ALREADY_EXISTS){check(code,"provider");goto abort;}
     FWPM_SUBLAYER0 sublayer={0};sublayer.subLayerKey=sublayerKey;
@@ -210,18 +288,31 @@ abort:
 }
 int wmain(int argc,wchar_t **argv) {
     if(argc<2)return 64;
+    if(!wcscmp(argv[1],L"service")) {
+        SERVICE_TABLE_ENTRYW table[]={{(wchar_t*)serviceName,policyService},{NULL,NULL}};
+        return StartServiceCtrlDispatcherW(table)?0:1;
+    }
     FWPM_SESSION0 session={0};session.displayData.name=L"Azadi Connect policy manager";
     DWORD code=check(FwpmEngineOpen0(NULL,RPC_C_AUTHN_WINNT,NULL,&session,&engine),"open-wfp");
     if(!code) {
         if(!wcscmp(argv[1],L"status")) {
             UINT32 count;UINT64 policy;code=listFilters(FALSE,&count,&policy);
             if(!code)printf("{\"active\":%s,\"mode\":\"%s\",\"filters\":%u,\"complete\":%s}\n",count?"true":"false",(policy&0xFFFFFFFF)==1?"system":"apps",count,(!count || (policy>>32)==count)?"true":"false");
-        } else if(!wcscmp(argv[1],L"unlock")) {
+        } else if(!wcscmp(argv[1],L"unlock") || !wcscmp(argv[1],L"uninstall")) {
             code=check(FwpmTransactionBegin0(engine,0),"unlock-begin");
             if(!code) {
                 UINT32 count;UINT64 policy;code=listFilters(TRUE,&count,&policy);
                 if(code)FwpmTransactionAbort0(engine);
                 else code=check(FwpmTransactionCommit0(engine),"unlock-commit");
+            }
+            if(!code && !wcscmp(argv[1],L"uninstall")) {
+                code=removeService();
+                if(!code) {
+                    DWORD removed=FwpmSubLayerDeleteByKey0(engine,&sublayerKey);
+                    if(removed!=(DWORD)FWP_E_SUBLAYER_NOT_FOUND)code=check(removed,"sublayer-delete");
+                    removed=FwpmProviderDeleteByKey0(engine,&providerKey);
+                    if(removed!=(DWORD)FWP_E_PROVIDER_NOT_FOUND && !code)code=check(removed,"provider-delete");
+                }
             }
             if(!code)puts("{\"active\":false,\"filters\":0}");
         } else if(argc==3 && !wcscmp(argv[1],L"arm")) {

@@ -89,7 +89,7 @@ Section "Uninstall"
   SetRegView 64
   SetShellVarContext all
   IfFileExists "$INSTDIR\resources\core\network-lock.exe" 0 NoNetworkLock
-  ExecWait '"$INSTDIR\resources\core\network-lock.exe" unlock' $0
+  ExecWait '"$INSTDIR\resources\core\network-lock.exe" uninstall' $0
   ${If} $0 != 0
     MessageBox MB_OK|MB_ICONSTOP "$(RestoreFailed)"
     Abort

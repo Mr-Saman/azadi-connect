@@ -25,8 +25,8 @@ console.log('Compiled Windows guardian; recorded SHA-256');
 
 const lockSource=path.join(root,'native/network-lock.c'),lockTarget=path.join(root,'resources/core/network-lock.exe');
 const lockArgs=process.platform==='win32'
-  ?['/nologo','/O2','/W4','/MT',lockSource,'/Fe:'+lockTarget,'/link','/SUBSYSTEM:CONSOLE','fwpuclnt.lib','iphlpapi.lib','rpcrt4.lib','ws2_32.lib']
-  :['-O2','-Wall','-Wextra','-municode','-static',lockSource,'-o',lockTarget,'-lfwpuclnt','-liphlpapi','-lrpcrt4','-lws2_32'];
+  ?['/nologo','/O2','/W4','/MT',lockSource,'/Fe:'+lockTarget,'/link','/SUBSYSTEM:CONSOLE','fwpuclnt.lib','iphlpapi.lib','rpcrt4.lib','ws2_32.lib','advapi32.lib']
+  :['-O2','-Wall','-Wextra','-municode','-static',lockSource,'-o',lockTarget,'-lfwpuclnt','-liphlpapi','-lrpcrt4','-lws2_32','-ladvapi32'];
 const lockResult=spawnSync(command,lockArgs,{stdio:'inherit'});
 if(lockResult.error)throw lockResult.error;
 if(lockResult.status!==0)throw new Error('Native network lock compilation failed');

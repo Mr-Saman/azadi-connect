@@ -21,7 +21,7 @@
 
 برای تغییر پروفایل، فهرست برنامه‌ها یا حالت اتصال، ابتدا VPN و قفل را آزاد کن. پس از قفل‌شدن، گزینهٔ خروج آن را حفظ می‌کند.
 
-**محدوده:** فیلترهای پایدار Windows Filtering Platform برای IPv4/IPv6 استفاده می‌شوند. Loopback، موتور همراه برنامه، رابط واقعی تونل و ارتباط ضروری DHCP/کشف همسایهٔ IPv6 استثنا هستند. در حالت برنامه‌ها پورت‌های DNS معمولی ۵۳ و ۸۵۳ برای کل سیستم محافظت می‌شوند؛ با قطع VPN، نام‌گشایی برنامه‌های دیگر هم ممکن است تا بازیابی متوقف شود. DoH داخل برنامهٔ انتخاب‌نشده در محدودهٔ محافظت آن برنامه نیست.
+**محدوده:** فیلترهای پایدار Windows Filtering Platform برای IPv4/IPv6 استفاده می‌شوند. هنگام اولین فعال‌سازی، سرویس کم‌اختیار Azadi Connect Network Lock با راه‌اندازی خودکار نصب می‌شود تا ویندوز ارائه‌دهندهٔ فیلترها را هنگام بارگذاری BFE بشناسد. سرویس پروفایل‌ها را نمی‌خواند و پورت شبکه باز نمی‌کند؛ هنگام حذف برنامه پاک می‌شود. Loopback، موتور همراه برنامه، رابط واقعی تونل و ارتباط ضروری DHCP/کشف همسایهٔ IPv6 استثنا هستند. در حالت برنامه‌ها پورت‌های DNS معمولی ۵۳ و ۸۵۳ برای کل سیستم محافظت می‌شوند؛ با قطع VPN، نام‌گشایی برنامه‌های دیگر هم ممکن است تا بازیابی متوقف شود. DoH داخل برنامهٔ انتخاب‌نشده در محدودهٔ محافظت آن برنامه نیست.
 
 این قابلیت در برابر مدیر محلی، خرابی کرنل، خاموش‌شدن سرویس BFE یا زمان ابتدای بوت پیش از بارگذاری سیاست تضمین نمی‌دهد. اتصال UDP/IPv6، برنامه‌های چندپردازشی، اتصال‌های قبلی، خواب/بیداری و تداخل با فایروال‌های دیگر به آزمون دستگاه واقعی نیاز دارند. نسخهٔ اولیه را محصول ممیزی‌شده یا تضمین ناشناس‌ماندن معرفی نمی‌کنیم.
 
@@ -39,6 +39,8 @@ Enable **Kill Switch — network lock** in Settings, then connect. The preferenc
 | Uninstall | Releases the lock first; preserves files if recovery fails |
 
 Recover using the in-app button, tray action or **Start → Azadi Connect → Restore Internet**. The Start shortcut runs before vault initialization and requests Administrator access. Release the lock before editing its scope.
+
+The first arm installs an automatic-start LocalService process, Azadi Connect Network Lock. It provides the service association BFE requires for persistent filters after a restart; it reads no profiles and exposes no network listener. Uninstall removes it. Live reboot testing is still required.
 
 The persistent IPv4/IPv6 ALE policy permits loopback, the bundled engine, the actual TUN LUID, narrowly scoped DHCP and essential IPv6 neighbor discovery. App mode also blocks ordinary DNS ports 53/853 globally outside the tunnel; unselected applications may lose DNS while the VPN is down. DoH in an unselected process is outside the selected-app scope.
 
