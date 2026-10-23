@@ -13,10 +13,10 @@ const root=path.resolve(__dirname,'..'),core=path.join(root,'resources/core');
 const helper=path.join(core,'network-lock.exe'),guardian=path.join(core,'guardian.exe'),binary=path.join(core,'sing-box.exe');
 const powershell=path.join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe');
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
-const ps=script=>exec(powershell,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{timeout:15000,windowsHide:true});
+const ps=script=>exec(powershell,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from("$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';"+script+';exit 0','utf16le').toString('base64')],{timeout:15000,windowsHide:true});
 const invoke=async(...args)=>JSON.parse((await exec(helper,args,{timeout:20000,windowsHide:true})).stdout);
 const probe=async(file,ip='1.1.1.1')=>{try{await exec(file,[ip],{timeout:5000,windowsHide:true});return true;}catch{return false;}};
-let child,routeAdded=false,directory,ownsPolicy=false;
+let child,routeAdded=false,directory,ownsPolicy=false,coreLogs='';
 async function stop() {
  if(!child)return;const p=child;child=null;
  const exit=new Promise(r=>p.once('close',r));
@@ -25,20 +25,20 @@ async function stop() {
 async function start(tun) {
  const port=await freePort(),proxyPort=await freePort(),secret='local-test-only';
  const file=path.join(directory,'test-core.json');
- const config={log:{level:'info'},inbounds:[{type:'http',tag:'proxy',listen:'127.0.0.1',listen_port:proxyPort}],
+ const config={log:{level:'debug'},inbounds:[{type:'http',tag:'proxy',listen:'127.0.0.1',listen_port:proxyPort}],
    outbounds:[{type:'direct',tag:'direct'}],route:{auto_detect_interface:true,final:'direct'},
    experimental:{clash_api:{external_controller:'127.0.0.1:'+port,secret}}};
  if(tun)config.inbounds.push({type:'tun',tag:'tun',interface_name:'AzadiConnect',address:['172.29.215.1/30','fd72:98c4:51af::1/126'],auto_route:false,strict_route:false,stack:'mixed'});
  await fs.writeFile(file,JSON.stringify(config));
  child=spawn(guardian,[binary,file],{stdio:['pipe','pipe','pipe'],windowsHide:true});
- let logs='';child.stderr.on('data',b=>logs+=b);child.stdout.on('data',b=>logs+=b);
+ coreLogs='';const capture=b=>{coreLogs=(coreLogs+String(b)).slice(-16000);};child.stderr.on('data',capture);child.stdout.on('data',capture);
  let up=false;
  for(let i=0;i<100;i++){
    if(child.exitCode!==null)break;
    try{const r=await fetch('http://127.0.0.1:'+port+'/version',{headers:{Authorization:'Bearer '+secret},signal:AbortSignal.timeout(500)});if(r.ok){up=true;break;}}catch{}
    await pause(100);
  }
- assert.ok(up,'Core/TUN failed to start under guardian:\n'+logs);
+ assert.ok(up,'Core/TUN failed to start under guardian:\n'+coreLogs);
  return proxyPort;
 }
 async function throughCore(port) {
@@ -57,12 +57,13 @@ async function throughCore(port) {
  try{
    assert.equal((await invoke('status')).active,false,'Runner already has an Azadi policy; refuse to overwrite it');
    ownsPolicy=true;
-   assert.ok(await probe(selected),'IPv4 baseline unavailable');
+   assert.ok(await probe(selected),'IPv4 baseline unavailable');console.log('PASS baseline physical IPv4');
    const ipv6='2606:4700:4700::1111',hasIPv6=await probe(selected,ipv6);
    // Isolated Wintun startup: no default route or DNS mutation.
-   await start(true);
+   const tunneledProxy=await start(true);console.log('PASS isolated TUN startup');
    await ps("New-NetRoute -DestinationPrefix '1.1.1.1/32' -InterfaceAlias 'AzadiConnect' -NextHop '0.0.0.0' -RouteMetric 1 -PolicyStore ActiveStore -ErrorAction Stop | Out-Null");
    routeAdded=true;
+   assert.ok(await throughCore(tunneledProxy),'Core transport failed with the isolated TUN route installed');
    assert.ok(await probe(selected),'Fixture traffic did not traverse the test TUN route');
    await fs.writeFile(policy,encodePolicy('apps',[selected]));await invoke('arm',policy);
    assert.equal((await invoke('status')).complete,true);
@@ -87,7 +88,7 @@ async function throughCore(port) {
    assert.equal(await probe(other),false,'System mode allowed direct fixture traffic');
    assert.ok(await throughCore(proxyPort),'Engine exception or loopback control was blocked');
    console.log('PASS full-system physical block and engine-only transport exception');
- }finally{
+ }catch(e){console.error('Native network test failed: '+e.message+'\nCore log:\n'+coreLogs);throw e;}finally{
    if(ownsPolicy){await invoke('unlock');assert.equal((await invoke('status')).active,false);}
    await stop();
    if(routeAdded)await ps("Get-NetRoute -DestinationPrefix '1.1.1.1/32' -ErrorAction SilentlyContinue | Where-Object { $_.InterfaceAlias -eq 'AzadiConnect' } | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue");

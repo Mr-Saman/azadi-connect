@@ -17,7 +17,7 @@ const uiPath=path.join(__dirname,'../ui/index.html');
 const uiUrl=pathToFileURL(uiPath).href;
 const ownsInstance=app.requestSingleInstanceLock();
 if(!ownsInstance)app.quit();
-app.on('second-instance',(_,args)=>{ if(window){window.show();window.focus();} if(args.includes('--restore-network')){const task=writeQueue.then(restoreNetwork);writeQueue=task.catch(()=>{});} });
+app.on('second-instance',(_,args)=>{ if(window){window.show();window.focus();} if(args.includes('--restore-network')){queueRecovery();} });
 function snapshot() {
   return { version:app.getVersion(), platform:process.platform,
     profiles:data.profiles.map(p=>({id:p.id,name:p.name,protocol:p.protocol,notes:p.notes,server:p.endpoint.server || p.endpoint.peers?.[0]?.address || p.endpoint.servers?.[0]?.server || ''})),
@@ -34,6 +34,10 @@ function handler(name, fn, mutation = false) {
     if(!mutation) return execute();
     const task=writeQueue.then(execute,execute); writeQueue=task.then(()=>{}); return task;
   });
+}
+function queueRecovery() {
+  const task=writeQueue.then(restoreNetwork);
+  writeQueue=task.catch(e=>dialog.showErrorBox('Azadi Connect','Internet recovery failed / بازیابی انجام نشد\n'+(e instanceof AppError?e.message:'operationFailed')));
 }
 async function restoreNetwork() {
   await engine?.stop(); await networkLock.unlock();
@@ -98,7 +102,7 @@ function updateTray() {
   tray.setContextMenu(Menu.buildFromTemplate([
     {label:fa?'باز کردن آزادی':'Open Azadi Connect',click:()=>window.show()},
     {label:fa?'قطع اتصال':'Disconnect',enabled:!!engine.child,click:()=>engine.stop()},
-    {label:fa?'بازیابی اینترنت مستقیم':'Restore direct Internet',enabled:!!engine.child||networkLock.state.active,click:()=>{const task=writeQueue.then(restoreNetwork);writeQueue=task.catch(()=>{});}},
+    {label:fa?'بازیابی اینترنت مستقیم':'Restore direct Internet',enabled:!!engine.child||networkLock.state.active,click:()=>{queueRecovery();}},
     {type:'separator'}, {label:fa?'خروج (حفظ قفل شبکه)':'Quit (keep network lock)',click:()=>app.quit()}
   ]));
 }
