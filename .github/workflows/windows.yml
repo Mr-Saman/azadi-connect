@@ -62,7 +62,8 @@ jobs:
       - name: Create checksums
         shell: pwsh
         run: |
-          Get-ChildItem dist -File | Where-Object { $_.Extension -eq '.exe' -or $_.Name.EndsWith('.tar.gz') } | ForEach-Object {
+          Copy-Item 'licenses/Wintun-LICENSE.txt' 'dist/Wintun-LICENSE.txt'
+          Get-ChildItem dist -File | Where-Object { $_.Extension -eq '.exe' -or $_.Name.EndsWith('.tar.gz') -or $_.Name -eq 'Wintun-LICENSE.txt' } | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)"
           } | Set-Content dist/SHA256SUMS.txt -Encoding ascii
@@ -73,6 +74,7 @@ jobs:
             dist/*.exe
             dist/SHA256SUMS.txt
             dist/*-source.tar.gz
+            dist/Wintun-LICENSE.txt
           if-no-files-found: error
       - name: Attach assets to the published matching release
         if: github.event_name == 'release'
@@ -83,4 +85,4 @@ jobs:
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           if ($env:RELEASE_TAG -ne "v$version") { throw 'Release tag must match package.json' }
-          gh release upload $env:RELEASE_TAG dist/*.exe dist/SHA256SUMS.txt dist/*-source.tar.gz --repo $env:GITHUB_REPOSITORY
+          gh release upload $env:RELEASE_TAG dist/*.exe dist/SHA256SUMS.txt dist/*-source.tar.gz dist/Wintun-LICENSE.txt --repo $env:GITHUB_REPOSITORY

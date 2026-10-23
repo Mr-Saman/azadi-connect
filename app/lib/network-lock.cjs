@@ -45,7 +45,9 @@ class NetworkLock {
     const filename=path.join(this.runtimeDirectory,'lock-'+crypto.randomBytes(16).toString('hex')+'.policy');
     try {
       await fs.writeFile(filename,encodePolicy(options.mode,options.apps),{mode:0o600,flag:'wx'});
-      await this.invoke('arm',[filename]);return await this.refresh();
+      await this.invoke('arm',[filename]);await this.refresh();
+      if(!this.state.active||!this.state.complete)throw new AppError('killSwitchFailed','network-lock: incomplete policy');
+      return this.state;
     } finally {await fs.unlink(filename).catch(()=>{});}
   }
   async unlock() {await this.invoke('unlock');return await this.refresh();}

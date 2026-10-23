@@ -56,6 +56,7 @@ static DWORD listFilters(BOOL remove, UINT32 *count, UINT64 *policy) {
             if(!IsEqualGUID(&entries[i]->subLayerKey,&sublayerKey))continue;
             if(*count==0)*policy=entries[i]->rawContext;
             else if(*policy!=entries[i]->rawContext)*policy=0;
+            if(entries[i]->flags & FWPM_FILTER_FLAG_DISABLED)*policy=0;
             (*count)++;
             if(remove && (code=check(FwpmFilterDeleteById0(engine,entries[i]->filterId),"delete-owned-filter")))break;
         }
