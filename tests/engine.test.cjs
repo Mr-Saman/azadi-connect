@@ -6,6 +6,7 @@ const {PassThrough}=require('node:stream');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {Engine,profileSecrets,scrub}=require('../app/lib/engine.cjs');
 const {NetworkLock,encodePolicy}=require('../app/lib/network-lock.cjs');
+const {prepareTransportProfile}=require('../app/lib/network.cjs');
 const profile={id:'test',endpoint:{type:'socks',server:'example.invalid',server_port:1080,password:'secret-test-123'}};
 function processFixture() {
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();
@@ -46,6 +47,32 @@ test('a failed VPN probe keeps an already armed network lock and reports its own
  await assert.rejects(engine.connect(profile,{mode:'system',killSwitch:true}),{code:'healthFailed'});
  assert.equal(lock.calls,2);assert.equal(engine.child,null);
  assert.match(engine.state.detail,/stage=probe/);assert.match(engine.state.detail,/504/);
+});
+test('an unavailable probe target falls back through the VPN and needs a real valid delay',async t=>{
+ const probes=[];
+ const {engine}=await fixture(t,{fetch:async url=>{
+   if(!url.includes('/delay'))return {ok:true,json:async()=>({})};
+   probes.push(url);
+   return probes.length===1?{ok:false,status:504}:{ok:true,json:async()=>({delay:18})};
+ }});
+ await engine.connect(profile,{mode:'system'});
+ assert.equal(engine.state.status,'connected');assert.equal(engine.state.latency,18);
+ assert.equal(probes.length,2);assert.ok(probes.every(url=>url.includes('/proxies/vpn/delay')));
+ assert.match(decodeURIComponent(probes[0]),/https:\/\/1\.1\.1\.1\//);
+});
+test('invalid delay values from every target cannot become a connected VPN',async t=>{
+ const {engine}=await fixture(t,{fetch:async url=>({ok:true,json:async()=>url.includes('/delay')?{delay:-1}:{}})});
+ await assert.rejects(engine.connect(profile,{mode:'system'}),{code:'healthFailed'});
+ assert.equal(engine.state.status,'error');assert.equal(engine.child,null);
+});
+test('WireGuard bootstrap prefers IPv4 and never changes the saved profile',async()=>{
+ const p={endpoint:{type:'wireguard',peers:[{address:'vpn.example',allowed_ips:['0.0.0.0/0','::/0']}]}};
+ const result=await prepareTransportProfile(p,async()=>[{address:'2001:db8::1',family:6},{address:'192.0.2.1',family:4}]);
+ assert.equal(result.endpoint.peers[0].address,'192.0.2.1');assert.equal(p.endpoint.peers[0].address,'vpn.example');
+ assert.deepEqual(result.endpoint.peers[0].allowed_ips,['0.0.0.0/0','::/0']);
+ const ipv6=await prepareTransportProfile(p,async()=>[{address:'2001:db8::1',family:6}]);
+ assert.equal(ipv6.endpoint.peers[0].address,'2001:db8::1');
+ await assert.rejects(prepareTransportProfile(p,async()=>{throw Error('DNS unavailable');}),{code:'bootstrapFailed'});
 });
 test('redaction covers nested credentials and certificate body lines',()=>{
  const credentials={password:'abc',nested:{uuid:'test-uuid',client_key:['-----BEGIN KEY-----\nline-of-secret\n-----END KEY-----']}};

@@ -12,10 +12,15 @@ function buildConfig(profile, options, controller) {
   const apps = [...new Set((options.apps || []).map(normalizeApp))];
   if (options.mode === 'apps' && !apps.length) throw new AppError('selectApps');
   const endpoint = structuredClone(profile.endpoint); endpoint.tag = 'vpn';
+  const ipv4WireGuard = endpoint.type==='wireguard' && endpoint.peers.length>0 && endpoint.peers.every(p=>isIP(p.address)===4);
+  if(ipv4WireGuard)endpoint.detour='wireguard-transport';
   const isEndpoint = ['wireguard','openvpn-client'].includes(endpoint.type);
   const system = options.mode === 'system';
   const rules = system ? [{ port: 53, action: 'hijack-dns' }] : [];
   if (options.mode === 'apps') rules.push({ process_path: apps, action: 'route', outbound: 'vpn' });
+  // Without a physical IPv6 default route, fail unselected TUN IPv6 quickly
+  // so clients can use IPv4. Selected IPv6 stays inside the VPN over UDP4.
+  if(!system && options.nativeIPv6===false)rules.push({inbound:'azadi-tun',ip_version:6,action:'reject'});
   // Do not add private-network bypasses ahead of application rules: a selected
   // application must not silently leak private-range destinations to the LAN.
   const config = {
@@ -34,7 +39,11 @@ function buildConfig(profile, options, controller) {
       // Shared Windows DNS must remain on LAN/Wi-Fi in app mode. strict_route
       // would block non-TUN DNS; default dns_mode would replace adapter DNS.
       auto_route: true, strict_route: system, dns_mode: system ? 'hijack' : 'disabled', stack: 'mixed' }],
-    outbounds: [{ type: 'direct', tag: 'direct' }, ...(isEndpoint ? [] : [endpoint])],
+    outbounds: [{ type: 'direct', tag: 'direct' },
+      // A non-empty direct dialer selects sing-box's client bind, avoiding the
+      // standard WireGuard bind's unnecessary udp6 socket on IPv4 servers.
+      ...(ipv4WireGuard?[{type:'direct',tag:'wireguard-transport',connect_timeout:'10s'}]:[]),
+      ...(isEndpoint ? [] : [endpoint])],
     route: { auto_detect_interface: true, default_domain_resolver: 'bootstrap', rules,
       final: options.mode === 'system' ? 'vpn' : 'direct' },
     experimental: { clash_api: { external_controller: `127.0.0.1:${controller.port}`, secret: controller.secret,

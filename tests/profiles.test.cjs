@@ -69,6 +69,16 @@ test('full-system routing uses VPN default for both IP versions',()=>{
  assert.equal(c.route.final,'vpn'); assert.equal(c.inbounds[0].address.length,2); assert.equal(c.inbounds[0].strict_route,true);
  assert.equal(c.inbounds[0].dns_mode,'hijack');assert.equal(c.route.rules[0].action,'hijack-dns');assert.equal(c.dns.servers[1].detour,'vpn');
 });
+test('IPv4 WireGuard transport avoids a dual socket bind and preserves inner IPv6',()=>{
+ const p=importProfiles(wg)[0];p.endpoint.peers[0].address='192.0.2.1';
+ const c=buildConfig(p,{mode:'apps',apps:['C:\\App\\app.exe'],nativeIPv6:false},{port:9090,secret:'s'});
+ assert.equal(c.endpoints[0].detour,'wireguard-transport');
+ assert.equal(c.outbounds.find(o=>o.tag==='wireguard-transport').connect_timeout,'10s');
+ assert.deepEqual(c.endpoints[0].address,p.endpoint.address);assert.deepEqual(c.endpoints[0].peers[0].allowed_ips,p.endpoint.peers[0].allowed_ips);
+ assert.equal(c.inbounds[0].address.length,2);assert.equal(c.route.rules[0].outbound,'vpn');
+ assert.deepEqual(c.route.rules[1],{inbound:'azadi-tun',ip_version:6,action:'reject'});
+ assert.equal(c.route.final,'direct');assert.equal(p.endpoint.detour,undefined);
+});
 test('no empty app mode, shell paths, relative executables or non-executables',()=>{
  const p=importProfiles(wg)[0]; assert.throws(()=>buildConfig(p,{mode:'apps',apps:[]},{port:9090,secret:'s'}));
  for(const s of ['app.exe','\\\\host\\app.exe','C:\\test.cmd','C:\\bad\n.exe']) assert.throws(()=>normalizeApp(s));

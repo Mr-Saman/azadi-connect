@@ -9,6 +9,11 @@ const crypto = require('node:crypto');
 const { buildConfig } = require('./config.cjs');
 const { AppError } = require('./errors.cjs');
 const { lockDirectory } = require('./vault.cjs');
+const { inspectNetwork,prepareTransportProfile } = require('./network.cjs');
+const HEALTH_TARGETS=Object.freeze([
+  {name:'cloudflare-ipv4',url:'https://1.1.1.1/cdn-cgi/trace'},
+  {name:'google-204',url:'https://www.gstatic.com/generate_204'}
+]);
 const pause = ms => new Promise(r => setTimeout(r, ms));
 async function freePort() {
   const server = net.createServer(); await new Promise((resolve,reject) => server.once('error',reject).listen(0,'127.0.0.1',resolve));
@@ -30,6 +35,8 @@ function profileSecrets(value,key='',result=[]) {
 class Engine extends EventEmitter {
   constructor(coreDirectory, runtimeDirectory, services = {}) {
     super(); this.spawn=services.spawn||spawn; this.request=services.fetch||fetch; this.pause=services.pause||pause; this.networkLock=services.networkLock;
+    this.inspectNetwork=services.inspectNetwork||inspectNetwork;this.lookup=services.lookup;
+    this.healthTargets=services.healthTargets||HEALTH_TARGETS;
     this.coreDirectory = coreDirectory; this.runtimeDirectory = runtimeDirectory;
     this.state = { status: 'disconnected', upload: 0, download: 0, latency: null, startedAt: null }; this.stopping = false; this.busy = false;
   }
@@ -61,7 +68,11 @@ class Engine extends EventEmitter {
     try {
       await this.verifyCore();
       this.controller={port:await freePort(),secret:crypto.randomBytes(32).toString('hex')};
-      const config=buildConfig(profile,options,this.controller);
+      stage='bootstrap';
+      const network=await this.inspectNetwork();
+      const prepared=await prepareTransportProfile(profile,this.lookup);
+      const config=buildConfig(prepared,{...options,nativeIPv6:network.ipv6},this.controller);
+      this.update({ipv4Compatibility:network.ipv6===false});
       this.configFile=path.join(this.runtimeDirectory,'session-'+crypto.randomBytes(16).toString('hex')+'.json');
       secrets.push(this.controller.secret,this.configFile,os.homedir());
       stage='configuration';await fs.writeFile(this.configFile,JSON.stringify(config),{mode:0o600,flag:'wx'});
@@ -107,9 +118,17 @@ class Engine extends EventEmitter {
         stage='network-lock';await this.networkLock.arm(options);this.emit('network-lock');
       }
       stage='probe';
-      let health;
-      try { health=await this.api('/proxies/vpn/delay?timeout=12000&url=https%3A%2F%2Fwww.gstatic.com%2Fgenerate_204',14000); }
-      catch(e) { if(ended)throw new AppError('coreFailed');throw new AppError('healthFailed',e.message); }
+      let health;const failures=[];
+      for(const target of this.healthTargets) {
+        if(ended)throw new AppError('coreFailed');
+        try {
+          const result=await this.api('/proxies/vpn/delay?timeout=8000&url='+encodeURIComponent(target.url),10000);
+          if(ended||this.child!==child)throw new AppError('coreFailed');
+          if(!Number.isFinite(result?.delay)||result.delay<0)throw Error('VPN probe returned no delay');
+          health=result;break;
+        }catch(e){if(ended)throw new AppError('coreFailed');failures.push(target.name+': '+e.message);}
+      }
+      if(!health)throw new AppError('healthFailed',failures.join('\n'));
       if(ended||this.child!==child)throw new AppError('coreFailed');
       if(!health||!Number.isFinite(health.delay))throw new AppError('healthFailed','VPN probe returned no delay');
       stage='running';this.update({status:'connected',latency:health.delay,startedAt:Date.now(),detail:null});
