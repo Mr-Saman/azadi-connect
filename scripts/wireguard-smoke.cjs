@@ -17,10 +17,12 @@ async function restoreBindings(){for(const name of bindings)await ps('Enable-Net
 (async()=>{
  directory=await fs.mkdtemp(path.join(process.env.ProgramData,'Azadi-WG-'));
  try{
-  const baseline=JSON.parse(await ps('@(Get-NetAdapter -Physical | Get-NetAdapterBinding -ComponentID ms_tcpip6 | Where-Object Enabled | Select-Object -ExpandProperty Name) | ConvertTo-Json -Compress')||'[]');
+  // Azure may expose hardware/VF adapters with no configurable IP bindings.
+  // Inspect the adapters actually carrying the native IPv4 default route.
+  const baseline=JSON.parse(await ps("$names=@(Get-NetRoute -PolicyStore ActiveStore | Where-Object { $_.DestinationPrefix -eq '0.0.0.0/0' -and $_.InterfaceAlias -ne 'AzadiConnect' } | Select-Object -ExpandProperty InterfaceAlias -Unique); @(Get-NetAdapterBinding -Name '*' -ComponentID ms_tcpip6 -IncludeHidden -ErrorAction SilentlyContinue | Where-Object { $_.Enabled -and $_.Name -in $names } | Select-Object -ExpandProperty Name -Unique) | ConvertTo-Json -Compress")||'[]');
   bindings=Array.isArray(baseline)?baseline:[baseline];
   for(const name of bindings)await ps('Disable-NetAdapterBinding -Name '+quote(name)+' -ComponentID ms_tcpip6 -Confirm:$false | Out-Null');
-  console.log('INFO isolated runner: physical IPv6 binding disabled for the regression; no registry or reboot changes');
+  console.log(bindings.length?'INFO isolated runner: native IPv6 bindings disabled for the regression; no registry or reboot changes':'INFO runner exposes no enabled IPv6 binding on the native default adapter; verifying its IPv4-only path');
   const clientKey=await keypair(),serverKey=await keypair(),wrongKey=await keypair();
   const udp=dgram.createSocket('udp4');await new Promise(r=>udp.bind(0,'127.0.0.1',r));const udpPort=udp.address().port;await new Promise(r=>udp.close(r));
   fixture=http.createServer((req,res)=>{requests++;res.writeHead(204);res.end();});
