@@ -9,6 +9,6 @@ contextBridge.exposeInMainWorld('azadi',Object.freeze({
   runningApps:()=>invoke('running-apps'), appIcons:()=>invoke('app-icons'), chooseApp:filename=>invoke('choose-app',filename),
   preferences:changes=>invoke('preferences',changes), connect:()=>invoke('connect'), disconnect:()=>invoke('disconnect'),
   restoreNetwork:()=>invoke('restore-network'), copyDiagnostics:()=>invoke('copy-diagnostics'),
-  window:action=>invoke('window',action), openProject:()=>invoke('open-project'),
+  window:action=>invoke('window',action), openProject:()=>invoke('open-project'), openShortcuts:()=>invoke('open-shortcuts'),
   onState:callback=>{ const listener=(_,state)=>callback(state); ipcRenderer.on('state-change',listener); return ()=>ipcRenderer.removeListener('state-change',listener); }
 }));

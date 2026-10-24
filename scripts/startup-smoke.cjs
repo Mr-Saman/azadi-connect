@@ -40,7 +40,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
     const response=await fetch(`http://127.0.0.1:${port}/proxies`,{headers:{Authorization:`Bearer ${secret}`},signal:AbortSignal.timeout(2000)});
     assert.ok(response.ok);assert.ok((await response.json()).proxies?.vpn);
     assert.doesNotMatch(logs,/FATAL|deprecated|empty direct outbound/i);
-    console.log(`PASS generated startup and DNS · ${mode} · ${dns?'profile DNS':'TLS DNS'}`);
+    console.log(`PASS generated startup and DNS · ${mode} · ${mode==='apps'?'native DNS'+(dns?' (profile DNS ignored)':''):dns?'profile DNS':'TLS DNS'}`);
    }finally{
     if(child.exitCode===null)child.kill();
     const timer=setTimeout(()=>child.kill('SIGKILL'),2000);

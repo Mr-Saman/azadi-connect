@@ -26,6 +26,13 @@ ShowUninstDetails show
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE DirectoryLeave
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_TEXT "$(RunApp)"
+!define MUI_FINISHPAGE_RUN_FUNCTION LaunchAzadi
+!define MUI_FINISHPAGE_SHOWREADME
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "$(ShowPinOptions)"
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+!define MUI_FINISHPAGE_SHOWREADME_FUNCTION ShowPinOptions
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
@@ -33,6 +40,14 @@ ShowUninstDetails show
 !insertmacro MUI_LANGUAGE "Farsi"
 LangString CloseApp ${LANG_ENGLISH} "Please quit Azadi Connect from its tray menu before installing or uninstalling."
 LangString CloseApp ${LANG_FARSI} "لطفاً پیش از نصب یا حذف، آزادی کانکت را از منوی کنار ساعت ویندوز ببندید."
+LangString RetryCloseApp ${LANG_ENGLISH} "Azadi Connect is still running. Quit it from its tray menu, then click Retry to continue updating. Closing its window only hides it."
+LangString RetryCloseApp ${LANG_FARSI} "آزادی کانکت هنوز در حال اجراست. از منوی کنار ساعت «خروج» را بزنید و سپس Retry را انتخاب کنید تا ارتقا ادامه یابد. بستن پنجره فقط آن را مخفی می‌کند."
+LangString RunApp ${LANG_ENGLISH} "Run Azadi Connect"
+LangString RunApp ${LANG_FARSI} "اجرای آزادی کانکت"
+LangString ShowPinOptions ${LANG_ENGLISH} "Show shortcut to pin to Start or taskbar"
+LangString ShowPinOptions ${LANG_FARSI} "نمایش میانبر برای پین به Start یا تسک‌بار"
+LangString InstallOrUpdate ${LANG_ENGLISH} "Installing or updating Azadi Connect; existing profile data is preserved."
+LangString InstallOrUpdate ${LANG_FARSI} "نصب یا به‌روزرسانی آزادی کانکت؛ پروفایل‌های ذخیره‌شده حفظ می‌شوند."
 LangString Windows64 ${LANG_ENGLISH} "Azadi Connect requires 64-bit Windows 10 or later."
 LangString Windows64 ${LANG_FARSI} "آزادی کانکت به ویندوز ۱۰ یا جدیدتر، نسخهٔ ۶۴ بیتی، نیاز دارد."
 LangString RestoreFailed ${LANG_ENGLISH} "Network lock recovery failed. Files were preserved. Run Restore Internet from Start as administrator and try uninstalling again."
@@ -47,11 +62,49 @@ Function .onInit
   ${EndIf}
   SetRegView 64
   SetShellVarContext all
+FunctionEnd
+Function LaunchAzadi
+  ; Use the interactive user's shell, including over-the-shoulder UAC installs.
+  ${StdUtils.ExecShellAsUser} $0 "$INSTDIR\Azadi Connect.exe" "open" ""
+FunctionEnd
+Function ShowPinOptions
+  ; Windows owns the final pin choice. No undocumented shell verbs or policies.
+  ${StdUtils.ExecShellAsUser} $0 "$WINDIR\explorer.exe" "open" '$\"$SMPROGRAMS\Azadi Connect$\"'
+FunctionEnd
+Function CloseForUpgrade
   FindWindow $0 "" "Azadi Connect"
-  ${If} $0 != 0
-    MessageBox MB_OK|MB_ICONEXCLAMATION "$(CloseApp)"
-    Abort
+  ${If} $0 == 0
+    Return
   ${EndIf}
+  IfFileExists "$INSTDIR\Azadi Connect.exe" 0 AskToClose
+  ; 0.4+ cooperates with updates. Older versions need the tray/Retry prompt.
+  GetDLLVersion "$INSTDIR\Azadi Connect.exe" $1 $2
+  IntOp $3 $1 >> 16
+  IntOp $4 $1 & 0xFFFF
+  ${If} $3 == 0
+  ${AndIf} $4 < 4
+    Goto AskToClose
+  ${EndIf}
+  ExecWait '$\"$INSTDIR\Azadi Connect.exe$\" --quit-for-update' $1
+  StrCpy $2 0
+  WaitForClose:
+    FindWindow $0 "" "Azadi Connect"
+    ${If} $0 == 0
+      Return
+    ${EndIf}
+    IntOp $2 $2 + 1
+    ${If} $2 < 60
+      Sleep 250
+      Goto WaitForClose
+    ${EndIf}
+  AskToClose:
+    IfSilent CloseAborted
+    MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(RetryCloseApp)" IDRETRY RetryClose
+  CloseAborted:
+    SetErrorLevel 2
+    Abort
+  RetryClose:
+    Call CloseForUpgrade
 FunctionEnd
 Function DirectoryLeave
   ${GetFileName} "$INSTDIR" $0
@@ -62,6 +115,8 @@ FunctionEnd
 Section "Azadi Connect" MainSection
   SetRegView 64
   SetShellVarContext all
+  Call CloseForUpgrade
+  DetailPrint "$(InstallOrUpdate)"
   ; Use the new helper from a private installer directory, since the installed
   ; 0.2 helper does not implement this command and may itself be running.
   InitPluginsDir
@@ -83,12 +138,15 @@ Section "Azadi Connect" MainSection
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\Azadi Connect"
   CreateShortcut "$SMPROGRAMS\Azadi Connect\Azadi Connect.lnk" "$INSTDIR\Azadi Connect.exe"
+  WinShell::SetLnkAUMI "$SMPROGRAMS\Azadi Connect\Azadi Connect.lnk" "org.azadi.connect"
   CreateShortcut "$SMPROGRAMS\Azadi Connect\Restore Internet.lnk" "$INSTDIR\Azadi Connect.exe" "--restore-network"
   CreateShortcut "$SMPROGRAMS\Azadi Connect\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   CreateShortcut "$DESKTOP\Azadi Connect.lnk" "$INSTDIR\Azadi Connect.exe"
+  WinShell::SetLnkAUMI "$DESKTOP\Azadi Connect.lnk" "org.azadi.connect"
   WriteRegStr HKLM "Software\AzadiConnect" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect" "DisplayName" "Azadi Connect ${VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect" "InstallLocation" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect" "Publisher" "Azadi Connect contributors"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect" "DisplayIcon" "$INSTDIR\Azadi Connect.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\AzadiConnect" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'

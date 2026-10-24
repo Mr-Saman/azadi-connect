@@ -6,7 +6,7 @@ const {pathToFileURL}=require('node:url');
 const root=path.resolve(__dirname,'../..');
 test.beforeEach(async({page})=>{
  await page.addInitScript(icon=>{
-  let state={version:'0.3.0',profiles:[],apps:[],language:'fa',theme:'dark',mode:'apps',connection:{status:'disconnected',upload:0,download:0},encryption:true};
+  let state={version:'0.4.0',profiles:[],apps:[],language:'fa',theme:'dark',mode:'apps',connection:{status:'disconnected',upload:0,download:0},encryption:true};
   const response=()=>Promise.resolve({ok:true,data:structuredClone(state)});
   window.azadi={state:response,onState:()=>{},preferences:changes=>{Object.assign(state,changes);return response();},importText:raw=>{state.profiles.push({id:'example',name:raw,protocol:'vless',server:'example.invalid'});state.selectedId='example';return response();},selectProfile:id=>{state.selectedId=id;return response();},deleteProfile:()=>{state.profiles=[];return response();},connect:()=>Promise.resolve({ok:false,error:'selectApps'}),disconnect:response,window:response,openProject:response,appIcons:()=>Promise.resolve({ok:true,data:state.apps.map(path=>({path,icon}))}),runningApps:()=>Promise.resolve({ok:true,data:[{path:'C:\\Example\\example.exe',name:'example.exe',icon},{path:'C:\\Tools\\Reader.exe',name:'Reader.exe',icon:null},{path:'C:\\Browser\\firefox.exe',name:'firefox.exe',icon}]}),chooseApp:p=>{state.apps.push(p);return response();}};
  },testIcon);
@@ -102,4 +102,13 @@ test('GitHub support is localized and opens only through the project action',asy
  expect(await page.evaluate(()=>window.projectOpened)).toBeTruthy();
  await page.locator('#language').click();await expect(page.locator('#star-project')).toContainText('Star on GitHub');
  await page.locator('[data-page=settings]').click();await expect(page.locator('main')).not.toContainText('ChatGPT');
+});
+
+test('localized pin action reveals the installed shortcut and explains the Windows choice',async({page})=>{
+ await page.evaluate(()=>{window.azadi.openShortcuts=async()=>{window.shortcutOpened=true;return {ok:true,data:true};};});
+ await page.locator('[data-page=settings]').click();
+ await expect(page.locator('#open-shortcuts')).toHaveText('نمایش میانبر برای پین');await page.locator('#open-shortcuts').click();
+ expect(await page.evaluate(()=>window.shortcutOpened)).toBeTruthy();await expect(page.locator('#toast')).toContainText('Pin to Start');
+ await page.locator('#language').click();await expect(page.locator('#open-shortcuts')).toHaveText('Show shortcut to pin');
+ await page.locator('#open-shortcuts').click();await expect(page.locator('#toast')).toContainText('Pin to taskbar');
 });

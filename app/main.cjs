@@ -12,6 +12,7 @@ const { importProfiles, MAX_IMPORT } = require('./lib/importers.cjs');
 const { normalizeApp } = require('./lib/config.cjs');
 const { AppError } = require('./lib/errors.cjs');
 const exec = promisify(execFile);
+if(process.platform==='win32')app.setAppUserModelId('org.azadi.connect');
 let window, tray, vault, engine, networkLock, data, quitting = false, writeQueue = Promise.resolve();
 const uiPath=path.join(__dirname,'../ui/index.html');
 const uiUrl=pathToFileURL(uiPath).href;
@@ -34,7 +35,10 @@ async function describeApps(filenames) {
 }
 const ownsInstance=app.requestSingleInstanceLock();
 if(!ownsInstance)app.quit();
-app.on('second-instance',(_,args)=>{ if(window){window.show();window.focus();} if(args.includes('--restore-network')){queueRecovery();} });
+app.on('second-instance',(_,args)=>{
+  if(args.includes('--quit-for-update')){writeQueue.then(()=>app.quit());return;}
+  if(window){window.show();window.focus();} if(args.includes('--restore-network')){queueRecovery();}
+});
 function snapshot() {
   return { version:app.getVersion(), platform:process.platform,
     profiles:data.profiles.map(p=>({id:p.id,name:p.name,protocol:p.protocol,notes:p.notes,server:p.endpoint.server || p.endpoint.peers?.[0]?.address || p.endpoint.servers?.[0]?.server || ''})),
@@ -116,6 +120,14 @@ function wireHandlers() {
     if(action==='minimize')window.minimize();else if(action==='close')window.hide();else if(action==='maximize'){if(window.isMaximized())window.unmaximize();else window.maximize();}
   });
   handler('open-project',async()=>shell.openExternal('https://github.com/Mr-Saman/azadi-connect'));
+  handler('open-shortcuts',async()=>{
+    if(process.platform!=='win32')throw new AppError('windowsOnly');
+    const script="[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false);[Environment]::GetFolderPath('CommonPrograms')";
+    const {stdout}=await exec(systemExe('WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-NonInteractive','-Command',script],{timeout:10000,windowsHide:true});
+    const shortcut=path.join(stdout.trim(),'Azadi Connect','Azadi Connect.lnk');
+    const target=await fs.access(shortcut).then(()=>shortcut,()=>process.execPath);
+    shell.showItemInFolder(target);return true;
+  });
 }
 function updateTray() {
   if(!tray || !data)return;
@@ -130,6 +142,7 @@ function updateTray() {
 }
 app.whenReady().then(async()=>{
   if(!ownsInstance)return;
+  if(process.argv.includes('--quit-for-update')){quitting=true;app.quit();return;}
   if(process.platform!=='win32' && !process.argv.includes('--ui-test')) { dialog.showErrorBox('Azadi Connect','This release supports Windows 10/11 x64.');app.quit();return; }
   if(process.platform==='win32') {
     try { await exec(systemExe('fltmc.exe'),[],{windowsHide:true,timeout:5000}); }
@@ -152,7 +165,7 @@ app.whenReady().then(async()=>{
   if(!Array.isArray(data.profiles)||!Array.isArray(data.apps))throw new AppError('storageError');
   engine=new Engine(coreDirectory,path.join(vault.directory,'runtime'),{networkLock});
   await engine.initialize();
-  try{await networkLock.refresh();if(networkLock.state.active)data.killSwitch=true;}catch{networkLock.state={active:false,unknown:true,error:'killSwitchFailed'};}
+  try{await networkLock.refreshForStartup({mode:data.mode,apps:data.apps});if(networkLock.state.active)data.killSwitch=true;}catch{networkLock.state={...networkLock.state,unknown:true,error:'killSwitchFailed'};}
   engine.on('state',notify);engine.on('network-lock',notify);
   window=new BrowserWindow({width:1240,height:850,minWidth:980,minHeight:740,show:false,frame:false,backgroundColor:'#0b101d',
     title:'Azadi Connect',icon:path.join(__dirname,'../ui/assets/icon.png'),

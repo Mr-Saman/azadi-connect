@@ -116,6 +116,7 @@ $('running-apps').addEventListener('click',async()=>{
 const setLanguage=language=>call('preferences',{language});const setTheme=()=>call('preferences',{theme:state.theme==='dark'?'light':'dark'});
 $('language').addEventListener('click',()=>setLanguage(state.language==='fa'?'en':'fa'));$('set-fa').addEventListener('click',()=>setLanguage('fa'));$('set-en').addEventListener('click',()=>setLanguage('en'));$('theme').addEventListener('click',setTheme);$('set-theme').addEventListener('click',setTheme);
 $('kill-switch').addEventListener('change',e=>call('preferences',{killSwitch:e.target.checked}));
+$('open-shortcuts').addEventListener('click',async()=>{if(await call('openShortcuts'))toast(t('pinHint'));});
 $('restore-network').addEventListener('click',()=>call('restoreNetwork'));
 $('copy-diagnostics').addEventListener('click',async()=>{if(await call('copyDiagnostics'))toast(t('diagnosticsCopied'));});
 $('win-min').addEventListener('click',()=>call('window','minimize'));$('win-max').addEventListener('click',()=>call('window','maximize'));$('win-close').addEventListener('click',()=>call('window','close'));$('project-link').addEventListener('click',()=>call('openProject'));$('star-project').addEventListener('click',()=>call('openProject'));

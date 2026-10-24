@@ -53,10 +53,14 @@ jobs:
         run: node scripts/guardian-smoke.cjs
       - name: Native Wintun and persistent Kill Switch checks (disposable runner)
         run: node scripts/network-lock-smoke.cjs
+      - name: Production app routing, shared DNS and unrelated HTTPS (disposable runner)
+        run: node scripts/app-routing-smoke.cjs
       - name: Build Windows x64 installer
         run: npx electron-builder --win nsis --x64 --publish never
       - name: Verify packaged manifest and integrity
         run: node scripts/verify-package.mjs
+      - name: Real install, running-app repair and shortcut identity (disposable runner)
+        run: node scripts/installer-smoke.cjs
       - name: Download exact upstream source for GPL availability
         shell: pwsh
         run: |
