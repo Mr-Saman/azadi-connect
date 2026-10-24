@@ -6,7 +6,6 @@ const {PassThrough}=require('node:stream');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {Engine,profileSecrets,scrub}=require('../app/lib/engine.cjs');
 const {NetworkLock,encodePolicy}=require('../app/lib/network-lock.cjs');
-const {prepareTransportProfile}=require('../app/lib/network.cjs');
 const profile={id:'test',endpoint:{type:'socks',server:'example.invalid',server_port:1080,password:'secret-test-123'}};
 function processFixture() {
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();
@@ -71,15 +70,7 @@ test('a 504 retains the core error reason and stage despite a full log buffer',a
  assert.match(engine.state.detail,/^stage=probe/);assert.match(engine.state.detail,/x509: certificate validation failed/);
  assert.ok(!engine.state.detail.includes('secret-test-123'));
 });
-test('WireGuard bootstrap prefers IPv4 and never changes the saved profile',async()=>{
- const p={endpoint:{type:'wireguard',peers:[{address:'vpn.example',allowed_ips:['0.0.0.0/0','::/0']}]}};
- const result=await prepareTransportProfile(p,async()=>[{address:'2001:db8::1',family:6},{address:'192.0.2.1',family:4}]);
- assert.equal(result.endpoint.peers[0].address,'192.0.2.1');assert.equal(p.endpoint.peers[0].address,'vpn.example');
- assert.deepEqual(result.endpoint.peers[0].allowed_ips,['0.0.0.0/0','::/0']);
- const ipv6=await prepareTransportProfile(p,async()=>[{address:'2001:db8::1',family:6}]);
- assert.equal(ipv6.endpoint.peers[0].address,'2001:db8::1');
- await assert.rejects(prepareTransportProfile(p,async()=>{throw Error('DNS unavailable');}),{code:'bootstrapFailed'});
-});
+
 test('redaction covers nested credentials and certificate body lines',()=>{
  const credentials={password:'abc',nested:{uuid:'test-uuid',client_key:['-----BEGIN KEY-----\nline-of-secret\n-----END KEY-----']}};
  const output=scrub('abc test-uuid line-of-secret',profileSecrets(credentials));

@@ -89,3 +89,13 @@ test('no empty app mode, shell paths, relative executables or non-executables',(
 test('log redaction removes known secrets and key-like blobs',()=>{
  assert.ok(!scrub('key '+privateKey).includes(privateKey)); assert.equal(scrub('password abcdefg',['abcdefg']),'password [redacted]');
 });
+
+test('IPv4-only networks resolve WireGuard names inside the permitted core, preserving saved profiles',()=>{
+ const p=importProfiles(wg)[0];p.endpoint.peers[0].address='vpn.example';
+ const c=buildConfig(p,{mode:'system',apps:[],nativeIPv6:false},{port:9090,secret:'s'});
+ assert.equal(c.endpoints[0].detour,'wireguard-transport');
+ assert.deepEqual(c.endpoints[0].domain_resolver,{server:'bootstrap',strategy:'ipv4_only'});
+ assert.equal(c.endpoints[0].peers[0].address,'vpn.example');assert.equal(p.endpoint.domain_resolver,undefined);
+ const dual=buildConfig(p,{mode:'system',apps:[],nativeIPv6:true},{port:9090,secret:'s'});
+ assert.equal(dual.endpoints[0].detour,undefined);
+});

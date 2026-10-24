@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const { buildConfig } = require('./config.cjs');
 const { AppError } = require('./errors.cjs');
 const { lockDirectory } = require('./vault.cjs');
-const { inspectNetwork,prepareTransportProfile } = require('./network.cjs');
+const { inspectNetwork } = require('./network.cjs');
 const HEALTH_TARGETS=Object.freeze([
   {name:'cloudflare-ipv4',url:'https://1.1.1.1/cdn-cgi/trace'},
   {name:'google-204',url:'https://www.gstatic.com/generate_204'}
@@ -35,7 +35,7 @@ function profileSecrets(value,key='',result=[]) {
 class Engine extends EventEmitter {
   constructor(coreDirectory, runtimeDirectory, services = {}) {
     super(); this.spawn=services.spawn||spawn; this.request=services.fetch||fetch; this.pause=services.pause||pause; this.networkLock=services.networkLock;
-    this.inspectNetwork=services.inspectNetwork||inspectNetwork;this.lookup=services.lookup;
+    this.inspectNetwork=services.inspectNetwork||inspectNetwork;
     this.healthTargets=services.healthTargets||HEALTH_TARGETS;
     this.coreDirectory = coreDirectory; this.runtimeDirectory = runtimeDirectory;
     this.state = { status: 'disconnected', upload: 0, download: 0, latency: null, startedAt: null }; this.stopping = false; this.busy = false;
@@ -76,8 +76,7 @@ class Engine extends EventEmitter {
       this.controller={port:await freePort(),secret:crypto.randomBytes(32).toString('hex')};
       stage='bootstrap';
       const network=await this.inspectNetwork();
-      const prepared=await prepareTransportProfile(profile,this.lookup);
-      const config=buildConfig(prepared,{...options,nativeIPv6:network.ipv6},this.controller);
+      const config=buildConfig(profile,{...options,nativeIPv6:network.ipv6},this.controller);
       this.update({ipv4Compatibility:network.ipv6===false});
       this.configFile=path.join(this.runtimeDirectory,'session-'+crypto.randomBytes(16).toString('hex')+'.json');
       secrets.push(this.controller.secret,this.configFile,os.homedir());
