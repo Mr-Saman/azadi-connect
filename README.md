@@ -10,7 +10,7 @@
 
 🇮🇷 **برای ایران ❤️ · For Iran ❤️**
 
-**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.3.0 Preview**
+**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.4.0 Preview**
 
 [English guide](#english) · [راهنمای فارسی](#فارسی) · [Architecture](docs/ARCHITECTURE.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
@@ -36,8 +36,8 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 ### 🪟 Install on Windows
 
-1. Open this repository’s **Releases** page and download `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.3.0).
-2. Run the installer and accept the Windows Administrator/UAC request. The installer offers an installation directory and shortcuts.
+1. Open this repository’s **Releases** page and download `Azadi-Connect-0.4.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.0).
+2. Run the installer and accept the Windows Administrator/UAC request. The installer supports reinstall/upgrade over an existing installation and preserves your profiles. Its finish page offers **Run Azadi Connect** (checked by default) and **Show shortcut to pin to Start or taskbar**.
 3. Open **Azadi Connect → Add profile**. Import your configuration, or paste a share link.
 4. Choose **Selected applications** and add the actual `.exe` paths, or choose **Entire system**.
 5. Click **Connect**. A connection is marked verified only after a request through the VPN outbound succeeds.
@@ -46,7 +46,9 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 **Release status:** this is an unsigned preview. Windows can display an unknown-publisher notice. The source and SHA-256 checksums are provided for inspection; there is no claim of independent security auditing. Windows routing, DNS and real-provider compatibility still require testing on your own device. An existing WireGuard/OpenVPN client is not required for supported imports; the engine is bundled.
 
-**Upgrading from 0.2:** quit the application from its tray menu, then run the new installer. It stops only Azadi’s network-lock service before replacing files; persistent filters remain until you explicitly restore direct Internet or reconnect.
+**Updating or reinstalling:** run the new installer over the existing installation. From 0.4 onward, the installer requests an orderly shutdown of a running copy. For 0.3 and earlier, choose **Quit** from the tray menu, then **Retry** in the installer; closing the window only hides it. Profiles and existing persistent protection are preserved. Old app-mode filters are migrated atomically when the new app opens.
+
+**Pin to Start/taskbar:** choose the finish-page shortcut option, or **Settings → Shortcuts & pinning → Show shortcut to pin**. Right-click **Azadi Connect.lnk** and select **Pin to Start** or **Pin to taskbar**. Windows owns that final choice; Windows 11 may put it under **Show more options**.
 
 ### 🧩 Supported imports
 
@@ -74,9 +76,9 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 - **Selected applications:** exact executable-path rules go through the VPN. Other application traffic is forwarded directly. Add helper executables separately where an app uses them. Close old app connections after changing routing.
 - **Entire system:** the default outbound is the VPN for traffic captured by the TUN interface, including IPv4 and IPv6. WireGuard `AllowedIPs` are preserved; a private-network-only profile cannot become a full internet VPN by changing the UI switch.
 
-**DNS policy:** ordinary system DNS uses the tunnel in both modes. The engine’s initial server hostname resolution uses a direct bootstrap resolver (`1.1.1.1`). Other DNS uses a WireGuard profile’s first DNS IP, or Cloudflare DNS-over-TLS through the VPN. Applications with built-in DoH follow their own application route. This is not a promise of absolute leak prevention.
+**DNS policy:** in **selected-app mode**, shared Windows DNS stays on the normal LAN/Wi-Fi resolver, so unrelated applications remain online when the VPN is unavailable. The TUN does not replace adapter DNS or intercept all DNS; the engine also bootstraps server names using the existing network resolver. An app’s own DNS/DoH follows its executable route. Shared Windows DNS for selected apps is also direct in this mode. In **entire-system mode**, ordinary DNS uses a WireGuard profile’s first DNS IP or Cloudflare DNS-over-TLS through the VPN, with direct `1.1.1.1` bootstrap. This is not a promise of absolute leak prevention.
 
-**🛡️ Optional Kill Switch:** enable it in Settings before connecting. Persistent Windows Filtering Platform rules block direct traffic for the selected executables or the whole system. The lock stays after disconnect, quit or core/app failure. Use **Restore direct Internet**, the tray recovery action, or **Start → Azadi Connect → Restore Internet** to release it. App mode also protects ordinary DNS globally; unselected applications remain outside the app traffic scope. See the [scope and recovery guide](docs/KILL_SWITCH.md). This preview is not an independently audited privacy product.
+**🛡️ Optional Kill Switch:** enable it in Settings before connecting. Persistent Windows Filtering Platform rules block direct traffic for the selected executables or the whole system. The lock stays after disconnect, quit or core/app failure. Use **Restore direct Internet**, the tray recovery action, or **Start → Azadi Connect → Restore Internet** to release it. App mode protects only selected executables; it leaves unrelated traffic and shared Windows DNS on the normal network. See the [scope and recovery guide](docs/KILL_SWITCH.md). This preview is not an independently audited privacy product.
 
 ### 💎 Included features
 
@@ -114,7 +116,7 @@ To create the installable Windows EXE:
 npm run build:win
 ```
 
-Output: `dist/Azadi-Connect-0.3.0-Windows-x64-Setup.exe`.
+Output: `dist/Azadi-Connect-0.4.0-Windows-x64-Setup.exe`.
 
 The download script pins **sing-box 1.14.3** and its official archive SHA-256. It never silently selects “latest.” The native guardian is compiled from the included C source, then its hash is recorded. The application rechecks both binaries before connecting. Installer branding, version information and the Administrator manifest are embedded with a JavaScript PE resource editor; Wine is not required for packaging on Linux.
 
@@ -127,7 +129,7 @@ npm run test:ui
 
 ### 🚀 Releases & development history
 
-The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 21 unit checks and 10 UI checks, compiles both native helpers, validates 22 generated configurations, starts four generated DNS/mode combinations to catch runtime transport errors, and exercises Wintun traffic, core crash, persistent per-app/system filtering and explicit recovery on a disposable Windows runner before packaging. On a published `v0.3.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
+The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 24 unit checks and 11 UI checks, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.4.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
 
 The initial implementation is developed in separate commits for the protocol core, desktop UI, validation, documentation and release packaging. Release binaries are generated from the checked-out commit, not committed into Git history.
 
@@ -155,9 +157,9 @@ The initial implementation is developed in separate commits for the protocol cor
 
 ### 🪟 روش نصب و استفاده
 
-۱. از بخش **Releases** فایل `Azadi-Connect-0.3.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.3.0) دریافت کن.
+۱. از بخش **Releases** فایل `Azadi-Connect-0.4.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.0) دریافت کن.
 
-۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد.
+۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد. نصب روی نسخهٔ موجود هم پشتیبانی می‌شود. در پایان، تیک **اجرای آزادی کانکت** و گزینهٔ **نمایش میانبر برای پین به Start یا تسک‌بار** را داری.
 
 ۳. در برنامه روی **افزودن پروفایل** بزن. فایل `.conf`، `.ovpn` یا `.txt` را انتخاب کن یا لینک اتصال را بچسبان. برای OpenVPN دارای `auth-user-pass`، پیش از انتخاب فایل، نام کاربری و رمز را در بخش مربوط وارد کن.
 
@@ -167,7 +169,9 @@ The initial implementation is developed in separate commits for the protocol cor
 
 🔐 پروفایل‌ها با حساب فعلی ویندوز و DPAPI رمزگذاری می‌شوند. کانفیگ‌ها و کلیدهای واقعی وارد سورس، گیت‌هاب یا سرور دیگری نمی‌شوند. برنامه سرور رایگان یا حساب VPN ارائه نمی‌کند و به یک کانفیگ معتبر از ارائه‌دهندهٔ خودت نیاز دارد.
 
-**ارتقا از ۰٫۲:** ابتدا برنامه را از منوی کنار ساعت ببند و نصب‌کنندهٔ جدید را اجرا کن. نصب‌کننده پیش از جایگزینی فایل‌ها فقط سرویس محافظت آزادی را متوقف می‌کند؛ قفل شبکه تا بازیابی صریح اینترنت یا اتصال دوباره باقی می‌ماند.
+**نصب مجدد و ارتقا:** نصب‌کننده را دوباره اجرا کن؛ پروفایل‌ها و سیاست محافظت موجود حفظ می‌شوند. از نسخهٔ ۰٫۴ به بعد، برنامهٔ باز به درخواست نصب‌کننده مرتب بسته می‌شود. برای نسخهٔ ۰٫۳ و قدیمی‌تر، از منوی کنار ساعت **خروج** را بزن و در نصب‌کننده **Retry** را انتخاب کن؛ بستن پنجره فقط آن را مخفی می‌کند. فیلتر قدیمی حالت برنامه‌ها هنگام بازشدن نسخهٔ جدید به‌صورت اتمی اصلاح می‌شود.
+
+**پین به Start یا تسک‌بار:** در پایان نصب، گزینهٔ نمایش میانبر را بزن؛ از **تنظیمات ← میانبرها و پین** هم در دسترس است. روی **Azadi Connect.lnk** راست‌کلیک کن و **Pin to Start** یا **Pin to taskbar** را بزن. انتخاب نهایی با خود ویندوز است؛ در ویندوز ۱۱ شاید ابتدا **Show more options** لازم باشد.
 
 ### 🧩 فرمت‌ها و قابلیت‌ها
 
@@ -192,9 +196,9 @@ The initial implementation is developed in separate commits for the protocol cor
 - **فقط برنامه‌های انتخاب‌شده:** مسیر دقیق فایل اجرایی مبنای قانون است. برنامه‌های دیگر مستقیم متصل می‌شوند. برای برنامه‌های چندپردازشی، فایل‌های کمکی مرتبط را هم اضافه کن و اتصال‌های قبلی را ببند و دوباره باز کن.
 - **تمام سیستم:** خروجی پیش‌فرض ترافیک گرفته‌شده توسط تونل، VPN است. محدودهٔ `AllowedIPs` در فایل WireGuard حفظ می‌شود؛ پروفایل مخصوص شبکهٔ داخلی با این گزینه به VPN کامل اینترنت تبدیل نمی‌شود.
 
-**سیاست DNS:** هنگام اتصال، DNS معمولی سیستم حتی در حالت انتخاب برنامه‌ها از VPN می‌گذرد. یافتن اولیهٔ آدرس سرور از DNS مستقیم `1.1.1.1` استفاده می‌کند. سپس اولین DNS عددی WireGuard یا Cloudflare DNS-over-TLS از داخل VPN به کار می‌رود. DoH داخلی هر برنامه تابع مسیر همان برنامه است.
+**سیاست DNS:** در حالت **انتخاب برنامه‌ها**، DNS مشترک ویندوز روی LAN/Wi-Fi عادی می‌ماند تا قطع VPN اینترنت برنامه‌های دیگر را قطع نکند. تونل DNS کارت شبکه را عوض نمی‌کند و DNS همهٔ برنامه‌ها را نمی‌گیرد؛ یافتن نام سرور هم از DNS شبکهٔ موجود است. DNS یا DoH داخلی هر برنامه تابع مسیر همان فایل اجرایی است. DNS مشترک ویندوز برای برنامه‌های منتخب نیز در این حالت مستقیم است. در حالت **تمام سیستم**، اولین DNS عددی پروفایل WireGuard یا Cloudflare DNS-over-TLS از VPN می‌گذرد؛ یافتن اولیهٔ سرور با `1.1.1.1` مستقیم است.
 
-**🛡️ Kill Switch اختیاری:** پیش از اتصال آن را در تنظیمات روشن کن. فیلتر پایدار ویندوز، مسیر مستقیم برنامه‌های منتخب یا کل سیستم را می‌بندد و پس از قطع VPN، خروج یا کرش باقی می‌ماند. برای آزادکردن آن **بازیابی اینترنت مستقیم** را در برنامه یا منوی کنار ساعت بزن؛ میانبر **Start → Azadi Connect → Restore Internet** نیز مستقل از گاوصندوق پروفایل‌ها کار می‌کند. در حالت برنامه‌ها، DNS معمولی کل سیستم نیز محافظت می‌شود. [راهنمای محدودهٔ محافظت و بازیابی](docs/KILL_SWITCH.md) را بخوان. نسخه همچنان اولیه و فاقد ممیزی امنیتی مستقل است.
+**🛡️ Kill Switch اختیاری:** پیش از اتصال آن را در تنظیمات روشن کن. فیلتر پایدار ویندوز، مسیر مستقیم برنامه‌های منتخب یا کل سیستم را می‌بندد و پس از قطع VPN، خروج یا کرش باقی می‌ماند. برای آزادکردن آن **بازیابی اینترنت مستقیم** را در برنامه یا منوی کنار ساعت بزن؛ میانبر **Start → Azadi Connect → Restore Internet** نیز مستقل از گاوصندوق پروفایل‌ها کار می‌کند. در حالت برنامه‌ها فقط فایل‌های اجرایی منتخب قفل می‌شوند؛ اینترنت و DNS عادی برنامه‌های دیگر حفظ می‌شود. [راهنمای محدودهٔ محافظت و بازیابی](docs/KILL_SWITCH.md) را بخوان. نسخه همچنان اولیه و فاقد ممیزی امنیتی مستقل است.
 
 ### 🛠️ راه‌اندازی سورس
 
@@ -253,4 +257,4 @@ This release remains **unsigned**. Code signing verifies publisher identity and 
 
 The generated bootstrap DNS transport now uses its own default direct dialer. An explicit `detour: direct` to an empty direct outbound was rejected during sing-box 1.14 startup even though `check` succeeded. The deprecated `independent_cache` field is removed, following the [official migration guide](https://sing-box.sagernet.org/migration/#migrate-independent-dns-cache). A runtime smoke test starts the actual generated DNS settings in both route modes, with and without a profile DNS IP. It uses a synthetic endpoint and does not claim a successful provider connection.
 
-ارجاع اضافی DNS اولیه به خروجی `direct` باعث خطای `detour to an empty direct outbound makes no sense` می‌شد. در نسخهٔ ۰٫۳ این ارجاع و گزینهٔ منسوخ `independent_cache` حذف شده‌اند. تنظیم DNS اولیه همچنان مستقیم است و DNS عادی از VPN عبور می‌کند. آزمون جدید، خود موتور را با تنظیمات DNS تولیدشده اجرا می‌کند؛ صرفا بررسی ساختار کانفیگ نیست.
+ارجاع اضافی DNS اولیه به خروجی `direct` باعث خطای `detour to an empty direct outbound makes no sense` می‌شد. در نسخهٔ ۰٫۳ این ارجاع و گزینهٔ منسوخ `independent_cache` حذف شده‌اند. تنظیم DNS اولیه مستقیم است؛ در نسخهٔ ۰٫۴، DNS عادی فقط در حالت تمام سیستم از VPN عبور می‌کند. آزمون جدید، خود موتور را با تنظیمات DNS تولیدشده اجرا می‌کند؛ صرفا بررسی ساختار کانفیگ نیست.

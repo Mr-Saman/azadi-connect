@@ -10,6 +10,7 @@ Azadi Connect application source is GPL-3.0-or-later. Its generated application 
 | Vazir | 30.1.0 | SIL Open Font License 1.1; [bundled license](licenses/Vazir-OFL.txt), [original font distribution](https://github.com/rastikerdar/vazir-font/tree/v30.1.0) |
 | Inter | Variable font, upstream distribution | SIL Open Font License 1.1; [bundled license](licenses/Inter-OFL.txt), [source](https://github.com/rsms/inter) |
 | electron-builder / NSIS | Pinned through package-lock.json | Build tooling; MIT / NSIS upstream licenses |
+| StdUtils / WinShell NSIS plug-ins | Bundled by pinned electron-builder NSIS tooling | Installer shell integration; [StdUtils](https://nsis.sourceforge.io/StdUtils_plug-in) / [WinShell](https://nsis.sourceforge.io/WinShell_plug-in); upstream toolset licenses apply |
 | resedit / pe-library | Pinned through package-lock.json | MIT; build-time PE resource editing |
 | fflate | 0.8.2 | MIT; build-time verified ZIP extraction |
 | Playwright | 1.64.1 | Apache-2.0; development tests only |

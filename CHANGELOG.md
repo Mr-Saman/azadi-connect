@@ -1,5 +1,16 @@
 # Changelog · تغییرات 🚀
 
+## 0.4.0 — Preview
+
+- Preserve ordinary LAN/Wi-Fi Internet for unselected apps: disable app-mode DNS hijacking/strict DNS filtering and use the existing network resolver for bootstrap.
+- Limit app Kill Switch filters to selected executables; atomically migrate persistent policies from older versions on startup.
+- Test the production TUN generator with selected/unselected HTTPS and fresh Windows/shared/raw DNS, including VPN failure and core crash.
+- Support reinstall/upgrade with preserved profiles and protection, cooperative shutdown for 0.4+ and a tray/Retry prompt for older versions.
+- Add localized finish-page Run and shortcut-to-pin checkboxes, consistent shortcut/AppUserModelID identity and an in-app shortcut action.
+- Exercise actual install, repair over a running copy and uninstall on disposable Windows CI.
+
+این نسخه اینترنت و DNS عادی برنامه‌های انتخاب‌نشده را حفظ می‌کند؛ نصب مجدد، تیک اجرای پس از نصب و نمایش میانبر برای پین به Start یا تسک‌بار هم اضافه شده است.
+
 ## 0.3.0 — Preview
 
 - Safely stop the existing network-lock service during upgrades without unlocking its persistent policy; wait for process exit before replacing its executable.
