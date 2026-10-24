@@ -8,8 +8,7 @@ const {encodePolicy}=require('../app/lib/network-lock.cjs');
 if(process.platform!=='win32'||!process.env.GITHUB_ACTIONS||!process.env.RUNNER_TEMP)throw Error('Disposable Windows GitHub runner required');
 const exec=promisify(execFile),root=path.resolve(__dirname,'..');
 const version=require('../package.json').version,pause=ms=>new Promise(r=>setTimeout(r,ms));
-// Use the real per-machine destination. RUNNER_TEMP has runner-specific ACLs
-// that can deny Electron's sandboxed children access to their own binaries.
+// Exercise the actual supported per-machine installation destination.
 const install=path.join(process.env.ProgramFiles,'Azadi Connect');
 const installer=path.join(root,'dist',`Azadi-Connect-${version}-Windows-x64-Setup.exe`);
 const application=path.join(install,'Azadi Connect.exe'),helper=path.join(install,'resources/core/network-lock.exe');

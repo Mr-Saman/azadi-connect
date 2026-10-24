@@ -8,6 +8,7 @@
 - Support reinstall/upgrade with preserved profiles and protection, cooperative shutdown for 0.4+ and a tray/Retry prompt for older versions.
 - Add localized finish-page Run and shortcut-to-pin checkboxes, consistent shortcut/AppUserModelID identity and an in-app shortcut action.
 - Exercise actual install, repair over a running copy and uninstall on disposable Windows CI.
+- Fix GPU/renderer startup rejection under Administrator: use an asInvoker application manifest with explicit UAC relaunch for the supervisor, retaining the renderer/GPU sandbox.
 
 این نسخه اینترنت و DNS عادی برنامه‌های انتخاب‌نشده را حفظ می‌کند؛ نصب مجدد، تیک اجرای پس از نصب و نمایش میانبر برای پین به Start یا تسک‌بار هم اضافه شده است.
 

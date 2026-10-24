@@ -147,11 +147,17 @@ app.whenReady().then(async()=>{
   if(process.platform==='win32') {
     try { await exec(systemExe('fltmc.exe'),[],{windowsHide:true,timeout:5000}); }
     catch {
-      // The NSIS installer and this fallback request ordinary Windows UAC.
+      // Elevate only the browser/supervisor process through ordinary UAC.
+      // An asInvoker PE manifest lets Chromium launch its restricted children.
       // No configuration-controlled text is interpolated into this command.
+      if(process.argv.includes('--elevated-launch'))throw new AppError('operationFailed');
       const executable=process.execPath.replace(/'/g,"''");
-      const argument=app.isPackaged?'':` -ArgumentList '${app.getAppPath().replace(/'/g,"''")}'`;
-      const script=`Start-Process -FilePath '${executable}'${argument} -Verb RunAs`;
+      const args=[...(app.isPackaged?[]:[app.getAppPath()]),'--elevated-launch',...(process.argv.includes('--restore-network')?['--restore-network']:[])];
+      const encodedArgs=args.map(value=>`'"${value.replace(/'/g,"''")}"'`).join(',');
+      const script=`$ErrorActionPreference='Stop';Start-Process -FilePath '${executable}' -ArgumentList @(${encodedArgs}) -Verb RunAs`;
+      // Otherwise the elevated replacement would see this launcher's lock and
+      // exit before we can hand it the application (or recovery) startup flag.
+      app.releaseSingleInstanceLock();quitting=true;
       const ps=path.join(process.env.SystemRoot || 'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
       await exec(ps,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{windowsHide:true});
       quitting=true;app.quit();return;

@@ -8,7 +8,7 @@ const directory=path.resolve('dist/win-unpacked');
 const exe=NtExecutable.from(await fs.readFile(path.join(directory,'Azadi Connect.exe')),{ignoreCert:true});
 const res=NtExecutableResource.from(exe);
 const manifest=res.entries.find(e=>e.type===24);assert.ok(manifest,'Missing Windows manifest');
-assert.match(Buffer.from(manifest.bin).toString('utf8'),/requireAdministrator/);
+assert.match(Buffer.from(manifest.bin).toString('utf8'),/requestedExecutionLevel level="asInvoker"/);
 assert.ok(Resource.IconGroupEntry.fromEntries(res.entries).length,'Missing application icon');
 assert.ok(Resource.VersionInfo.fromEntries(res.entries).some(v=>v.getStringValues({lang:1033,codepage:1200}).ProductName==='Azadi Connect'),'Missing version branding');
 const core=path.join(directory,'resources/core');const meta=JSON.parse(await fs.readFile(path.join(core,'integrity.json'),'utf8'));
