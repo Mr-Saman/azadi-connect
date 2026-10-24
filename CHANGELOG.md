@@ -1,5 +1,15 @@
 # Changelog · تغییرات 🚀
 
+## 0.4.1 — Preview
+
+- Fix WireGuard UDP6 bind/update failures for IPv4 peers: use a non-empty direct transport with the core's connected UDP client bind instead of the standard dual socket bind.
+- Resolve peer hostnames before tunnel setup with IPv4 preference; preserve saved profiles, inner IPv6 and AllowedIPs.
+- Read native IPv6 default-route availability; fail unselected TUN IPv6 quickly when absent while retaining selected IPv6 in the VPN.
+- Try an IPv4 HTTPS health target and a second independent target through the VPN; require a finite non-negative delay and retain honest failure reporting.
+- Add a real encrypted WireGuard handshake regression on disposable Windows with physical IPv6 disabled, adapter rebind and wrong-key checks.
+
+رفع خطای bind سوکت IPv6 در اتصال WireGuard به سرورهای IPv4، بهبود آزمون سلامت اتصال و آزمون واقعی تبادل رمزگذاری‌شدهٔ WireGuard در این نسخه اضافه شد.
+
 ## 0.4.0 — Preview
 
 - Preserve ordinary LAN/Wi-Fi Internet for unselected apps: disable app-mode DNS hijacking/strict DNS filtering and use the existing network resolver for bootstrap.

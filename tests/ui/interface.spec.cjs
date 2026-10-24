@@ -6,7 +6,7 @@ const {pathToFileURL}=require('node:url');
 const root=path.resolve(__dirname,'../..');
 test.beforeEach(async({page})=>{
  await page.addInitScript(icon=>{
-  let state={version:'0.4.0',profiles:[],apps:[],language:'fa',theme:'dark',mode:'apps',connection:{status:'disconnected',upload:0,download:0},encryption:true};
+  let state={version:'0.4.1',profiles:[],apps:[],language:'fa',theme:'dark',mode:'apps',connection:{status:'disconnected',upload:0,download:0},encryption:true};
   const response=()=>Promise.resolve({ok:true,data:structuredClone(state)});
   window.azadi={state:response,onState:()=>{},preferences:changes=>{Object.assign(state,changes);return response();},importText:raw=>{state.profiles.push({id:'example',name:raw,protocol:'vless',server:'example.invalid'});state.selectedId='example';return response();},selectProfile:id=>{state.selectedId=id;return response();},deleteProfile:()=>{state.profiles=[];return response();},connect:()=>Promise.resolve({ok:false,error:'selectApps'}),disconnect:response,window:response,openProject:response,appIcons:()=>Promise.resolve({ok:true,data:state.apps.map(path=>({path,icon}))}),runningApps:()=>Promise.resolve({ok:true,data:[{path:'C:\\Example\\example.exe',name:'example.exe',icon},{path:'C:\\Tools\\Reader.exe',name:'Reader.exe',icon:null},{path:'C:\\Browser\\firefox.exe',name:'firefox.exe',icon}]}),chooseApp:p=>{state.apps.push(p);return response();}};
  },testIcon);

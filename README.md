@@ -10,7 +10,7 @@
 
 🇮🇷 **برای ایران ❤️ · For Iran ❤️**
 
-**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.4.0 Preview**
+**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.4.1 Preview**
 
 [English guide](#english) · [راهنمای فارسی](#فارسی) · [Architecture](docs/ARCHITECTURE.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
@@ -36,7 +36,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 ### 🪟 Install on Windows
 
-1. Open this repository’s **Releases** page and download `Azadi-Connect-0.4.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.0).
+1. Open this repository’s **Releases** page and download `Azadi-Connect-0.4.1-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.1).
 2. Run the installer and accept the Windows Administrator/UAC request. The installer supports reinstall/upgrade over an existing installation and preserves your profiles. Its finish page offers **Run Azadi Connect** (checked by default) and **Show shortcut to pin to Start or taskbar**.
 3. Open **Azadi Connect → Add profile**. Import your configuration, or paste a share link.
 4. Choose **Selected applications** and add the actual `.exe` paths, or choose **Entire system**.
@@ -75,6 +75,10 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 - **Selected applications:** exact executable-path rules go through the VPN. Other application traffic is forwarded directly. Add helper executables separately where an app uses them. Close old app connections after changing routing.
 - **Entire system:** the default outbound is the VPN for traffic captured by the TUN interface, including IPv4 and IPv6. WireGuard `AllowedIPs` are preserved; a private-network-only profile cannot become a full internet VPN by changing the UI switch.
+
+**WireGuard compatibility:** IPv4 peers use a connected UDP transport without opening an unnecessary IPv6 socket. Peer hostnames are resolved on the normal Windows network before the tunnel starts, preferring IPv4 when available; saved keys, tunnel addresses and AllowedIPs are preserved. IPv6-only peer endpoints still need a working native IPv6 path. On networks without a physical IPv6 default route, unrelated TUN IPv6 fails quickly so apps can retry IPv4; selected IPv6 stays inside the VPN.
+
+**Connection check:** two HTTPS targets are tried through the VPN output, starting with a literal IPv4 Cloudflare address to avoid a Google/DNS single point of failure. Both failing still produces `healthFailed`; a running engine alone is never reported as connected.
 
 **DNS policy:** in **selected-app mode**, shared Windows DNS stays on the normal LAN/Wi-Fi resolver, so unrelated applications remain online when the VPN is unavailable. The TUN does not replace adapter DNS or intercept all DNS; the engine also bootstraps server names using the existing network resolver. An app’s own DNS/DoH follows its executable route. Shared Windows DNS for selected apps is also direct in this mode. In **entire-system mode**, ordinary DNS uses a WireGuard profile’s first DNS IP or Cloudflare DNS-over-TLS through the VPN, with direct `1.1.1.1` bootstrap. This is not a promise of absolute leak prevention.
 
@@ -116,7 +120,7 @@ To create the installable Windows EXE:
 npm run build:win
 ```
 
-Output: `dist/Azadi-Connect-0.4.0-Windows-x64-Setup.exe`.
+Output: `dist/Azadi-Connect-0.4.1-Windows-x64-Setup.exe`.
 
 The download script pins **sing-box 1.14.3** and its official archive SHA-256. It never silently selects “latest.” The native guardian is compiled from the included C source, then its hash is recorded. The application rechecks both binaries before connecting. Installer branding, version information and the Administrator manifest are embedded with a JavaScript PE resource editor; Wine is not required for packaging on Linux.
 
@@ -129,7 +133,7 @@ npm run test:ui
 
 ### 🚀 Releases & development history
 
-The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 24 unit checks and 11 UI checks, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.4.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
+The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 28 unit checks and 11 UI checks, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. A real two-peer WireGuard fixture sends encrypted traffic with physical IPv6 disabled, checks adapter rebind and rejects a wrong key. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.4.1` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
 
 The initial implementation is developed in separate commits for the protocol core, desktop UI, validation, documentation and release packaging. Release binaries are generated from the checked-out commit, not committed into Git history.
 
@@ -157,7 +161,7 @@ The initial implementation is developed in separate commits for the protocol cor
 
 ### 🪟 روش نصب و استفاده
 
-۱. از بخش **Releases** فایل `Azadi-Connect-0.4.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.0) دریافت کن.
+۱. از بخش **Releases** فایل `Azadi-Connect-0.4.1-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.1) دریافت کن.
 
 ۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد. نصب روی نسخهٔ موجود هم پشتیبانی می‌شود. در پایان، تیک **اجرای آزادی کانکت** و گزینهٔ **نمایش میانبر برای پین به Start یا تسک‌بار** را داری.
 
@@ -195,6 +199,10 @@ The initial implementation is developed in separate commits for the protocol cor
 
 - **فقط برنامه‌های انتخاب‌شده:** مسیر دقیق فایل اجرایی مبنای قانون است. برنامه‌های دیگر مستقیم متصل می‌شوند. برای برنامه‌های چندپردازشی، فایل‌های کمکی مرتبط را هم اضافه کن و اتصال‌های قبلی را ببند و دوباره باز کن.
 - **تمام سیستم:** خروجی پیش‌فرض ترافیک گرفته‌شده توسط تونل، VPN است. محدودهٔ `AllowedIPs` در فایل WireGuard حفظ می‌شود؛ پروفایل مخصوص شبکهٔ داخلی با این گزینه به VPN کامل اینترنت تبدیل نمی‌شود.
+
+**سازگاری WireGuard:** برای سرورهای IPv4 از مسیر UDP متصل استفاده می‌شود و سوکت اضافی IPv6 باز نمی‌شود. نام سرور پیش از تونل روی شبکهٔ عادی ویندوز با ترجیح IPv4 پیدا می‌شود؛ کلیدها، آدرس داخل تونل و AllowedIPs فایل اصلی حفظ می‌شوند. سرورِ فقط IPv6 همچنان به مسیر IPv6 سالم نیاز دارد. اگر مسیر پیش‌فرض IPv6 فیزیکی موجود نباشد، ترافیک IPv6 برنامه‌های غیرمنتخب سریع رد می‌شود تا برنامه بتواند IPv4 را امتحان کند؛ IPv6 برنامه‌های منتخب داخل VPN می‌ماند.
+
+**آزمون اتصال:** دو مقصد HTTPS از داخل خروجی VPN امتحان می‌شوند؛ ابتدا آدرس عددی IPv4 کلادفلر، تا بررسی به Google یا DNS آن وابسته نباشد. شکست هر دو مقصد همچنان `healthFailed` می‌دهد و صرف اجرای موتور به‌عنوان اتصال موفق اعلام نمی‌شود.
 
 **سیاست DNS:** در حالت **انتخاب برنامه‌ها**، DNS مشترک ویندوز روی LAN/Wi-Fi عادی می‌ماند تا قطع VPN اینترنت برنامه‌های دیگر را قطع نکند. تونل DNS کارت شبکه را عوض نمی‌کند و DNS همهٔ برنامه‌ها را نمی‌گیرد؛ یافتن نام سرور هم از DNS شبکهٔ موجود است. DNS یا DoH داخلی هر برنامه تابع مسیر همان فایل اجرایی است. DNS مشترک ویندوز برای برنامه‌های منتخب نیز در این حالت مستقیم است. در حالت **تمام سیستم**، اولین DNS عددی پروفایل WireGuard یا Cloudflare DNS-over-TLS از VPN می‌گذرد؛ یافتن اولیهٔ سرور با `1.1.1.1` مستقیم است.
 
