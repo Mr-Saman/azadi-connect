@@ -8,7 +8,9 @@ const {encodePolicy}=require('../app/lib/network-lock.cjs');
 if(process.platform!=='win32'||!process.env.GITHUB_ACTIONS||!process.env.RUNNER_TEMP)throw Error('Disposable Windows GitHub runner required');
 const exec=promisify(execFile),root=path.resolve(__dirname,'..');
 const version=require('../package.json').version,pause=ms=>new Promise(r=>setTimeout(r,ms));
-const install=path.join(process.env.RUNNER_TEMP,'Azadi Connect');
+// Use the real per-machine destination. RUNNER_TEMP has runner-specific ACLs
+// that can deny Electron's sandboxed children access to their own binaries.
+const install=path.join(process.env.ProgramFiles,'Azadi Connect');
 const installer=path.join(root,'dist',`Azadi-Connect-${version}-Windows-x64-Setup.exe`);
 const application=path.join(install,'Azadi Connect.exe'),helper=path.join(install,'resources/core/network-lock.exe');
 const powershell=path.join(process.env.SystemRoot,'System32/WindowsPowerShell/v1.0/powershell.exe');
@@ -17,7 +19,7 @@ const invoke=async(...args)=>JSON.parse((await exec(helper,args,{timeout:20000,w
 const quote=value=>"'"+value.replace(/'/g,"''")+"'";
 const exists=async file=>{try{await fs.access(file);return true;}catch{return false;}};
 const marker=path.join(process.env.APPDATA,'Azadi Connect/private/upgrade-test-marker.txt');
-let child,ownsPolicy=false;
+let child,ownsPolicy=false,appLogs='';
 async function installAgain() {
  // NSIS requires /D to be the final unquoted switch, including paths with spaces.
  await exec(installer,['/S','/D='+install],{timeout:120000,windowsVerbatimArguments:true,windowsHide:true});
@@ -43,14 +45,15 @@ async function stopApp() {
   await fs.writeFile(policy,encodePolicy('apps',[path.join(root,'test-output/network-probe.exe')]));await invoke('arm',policy);
   const before=await invoke('status');assert.equal(before.active,true);
   // No provider credentials and no connection requested.
-  child=spawn(application,['--disable-gpu'],{stdio:'ignore',windowsHide:false});let error;child.on('error',e=>{error=e;});
+  child=spawn(application,['--disable-gpu','--enable-logging=stderr'],{stdio:['ignore','pipe','pipe'],windowsHide:false});let error;child.on('error',e=>{error=e;});
+  const collect=b=>{appLogs=(appLogs+b.toString()).slice(-16000);};child.stdout.on('data',collect);child.stderr.on('data',collect);
   let visible=false;
   for(let i=0;i<30;i++){
    if(error||child.exitCode!==null)break;
    const value=await ps("@(Get-Process | Where-Object { $_.Path -eq "+quote(application)+" -and $_.MainWindowTitle -eq 'Azadi Connect' }).Count");
    if(Number(value)>0){visible=true;break;}await pause(300);
   }
-  assert.ok(visible,'Installed application did not create its window: '+(error?.message||child.exitCode));
+  assert.ok(visible,'Installed application did not create its window: '+(error?.message||child.exitCode)+'\n'+appLogs);
   await installAgain();
   for(let i=0;i<30&&child.exitCode===null&&!child.signalCode;i++)await pause(100);
   assert.ok(child.exitCode!==null||child.signalCode,'Repair did not close the previous app instance');
