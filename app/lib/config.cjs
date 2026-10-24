@@ -12,7 +12,9 @@ function buildConfig(profile, options, controller) {
   const apps = [...new Set((options.apps || []).map(normalizeApp))];
   if (options.mode === 'apps' && !apps.length) throw new AppError('selectApps');
   const endpoint = structuredClone(profile.endpoint); endpoint.tag = 'vpn';
-  const ipv4WireGuard = endpoint.type==='wireguard' && endpoint.peers.length>0 && endpoint.peers.every(p=>isIP(p.address)===4);
+  // The core forbids detour together with a fixed listen_port; retain that
+  // explicit user requirement rather than silently changing the source port.
+  const ipv4WireGuard = endpoint.type==='wireguard' && !endpoint.listen_port && endpoint.peers.length>0 && endpoint.peers.every(p=>isIP(p.address)===4);
   if(ipv4WireGuard)endpoint.detour='wireguard-transport';
   const isEndpoint = ['wireguard','openvpn-client'].includes(endpoint.type);
   const system = options.mode === 'system';

@@ -42,3 +42,5 @@ The Linux editing sandbox denies netlink socket creation even without a TUN inbo
 Installer packaging uses solid zlib. The pinned builder enforces a four-minute NSIS compiler timeout; solid LZMA exceeded it on a shared Windows runner. The compressor change trades a larger installer for predictable build time.
 
 WireGuard peer hostnames are resolved before TUN startup using the current OS resolver, preferring an available IPv4 address; resolution is refreshed on reconnect. The CI fixture uses fresh synthetic keys and a private local HTTP endpoint inside the encrypted WireGuard link. Production health checks use HTTPS with normal certificate validation and never use direct-outbound fallback. This test does not validate a user’s server, UDP reachability, credentials or provider policy.
+
+An explicitly fixed WireGuard `ListenPort` is preserved and retains the core’s standard bind, because sing-box forbids combining that field with a detour. On a machine affected by the UDP6 bind failure, use an automatic source port (`ListenPort=0` or omit it) when the provider permits, or repair the machine’s native IPv6 path. IPv6-only peer endpoints also require native IPv6.

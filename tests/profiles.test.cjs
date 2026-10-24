@@ -78,6 +78,9 @@ test('IPv4 WireGuard transport avoids a dual socket bind and preserves inner IPv
  assert.equal(c.inbounds[0].address.length,2);assert.equal(c.route.rules[0].outbound,'vpn');
  assert.deepEqual(c.route.rules[1],{inbound:'azadi-tun',ip_version:6,action:'reject'});
  assert.equal(c.route.final,'direct');assert.equal(p.endpoint.detour,undefined);
+ p.endpoint.listen_port=51820;
+ const fixed=buildConfig(p,{mode:'system',apps:[]},{port:9090,secret:'s'});
+ assert.equal(fixed.endpoints[0].listen_port,51820);assert.equal(fixed.endpoints[0].detour,undefined);
 });
 test('no empty app mode, shell paths, relative executables or non-executables',()=>{
  const p=importProfiles(wg)[0]; assert.throws(()=>buildConfig(p,{mode:'apps',apps:[]},{port:9090,secret:'s'}));
