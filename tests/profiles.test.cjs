@@ -59,12 +59,15 @@ test('raw engine JSON, empty and oversized imports are rejected',()=>{
 });
 test('selected-application rules precede direct default and preserve exact paths',()=>{
  const c=buildConfig(importProfiles(wg)[0],{mode:'apps',apps:['C:\\Program Files\\App\\app.exe']},{port:9090,secret:'secret'});
- assert.equal(c.route.final,'direct'); assert.equal(c.route.rules[1].outbound,'vpn'); assert.deepEqual(c.route.rules[1].process_path,['C:\\Program Files\\App\\app.exe']);
- assert.equal(c.dns.servers[1].detour,'vpn'); assert.equal(c.experimental.clash_api.external_controller,'127.0.0.1:9090');
+ assert.equal(c.route.final,'direct'); assert.equal(c.route.rules[0].outbound,'vpn'); assert.deepEqual(c.route.rules[0].process_path,['C:\\Program Files\\App\\app.exe']);
+ assert.equal(c.route.rules.length,1);assert.equal(c.inbounds[0].strict_route,false);assert.equal(c.inbounds[0].dns_mode,'disabled');
+ assert.deepEqual(c.dns.servers,[{type:'local',tag:'bootstrap',prefer_go:true}]);assert.equal(c.dns.final,'bootstrap');
+ assert.equal(c.experimental.clash_api.external_controller,'127.0.0.1:9090');
 });
 test('full-system routing uses VPN default for both IP versions',()=>{
  const c=buildConfig(importProfiles(wg)[0],{mode:'system',apps:[]},{port:9090,secret:'s'});
  assert.equal(c.route.final,'vpn'); assert.equal(c.inbounds[0].address.length,2); assert.equal(c.inbounds[0].strict_route,true);
+ assert.equal(c.inbounds[0].dns_mode,'hijack');assert.equal(c.route.rules[0].action,'hijack-dns');assert.equal(c.dns.servers[1].detour,'vpn');
 });
 test('no empty app mode, shell paths, relative executables or non-executables',()=>{
  const p=importProfiles(wg)[0]; assert.throws(()=>buildConfig(p,{mode:'apps',apps:[]},{port:9090,secret:'s'}));

@@ -36,6 +36,6 @@ console.log('Compiled persistent Windows network lock; recorded SHA-256');
 
 if(process.env.GITHUB_ACTIONS) {
   const probe=path.join(root,'test-output/network-probe.exe');await fs.mkdir(path.dirname(probe),{recursive:true});
-  const r=spawnSync(command,['/nologo','/O2','/W4','/MT',path.join(root,'native/network-probe.c'),'/Fe:'+probe,'/link','ws2_32.lib'],{stdio:'inherit'});
+  const r=spawnSync(command,['/nologo','/O2','/W4','/MT',path.join(root,'native/network-probe.c'),'/Fe:'+probe,'/link','ws2_32.lib','dnsapi.lib','winhttp.lib'],{stdio:'inherit'});
   if(r.error)throw r.error;if(r.status!==0)throw new Error('Probe fixture compilation failed');
 }

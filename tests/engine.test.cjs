@@ -5,7 +5,7 @@ const {EventEmitter}=require('node:events');
 const {PassThrough}=require('node:stream');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {Engine,profileSecrets,scrub}=require('../app/lib/engine.cjs');
-const {encodePolicy}=require('../app/lib/network-lock.cjs');
+const {NetworkLock,encodePolicy}=require('../app/lib/network-lock.cjs');
 const profile={id:'test',endpoint:{type:'socks',server:'example.invalid',server_port:1080,password:'secret-test-123'}};
 function processFixture() {
  const child=new EventEmitter();child.stdout=new PassThrough();child.stderr=new PassThrough();child.stdin=new PassThrough();
@@ -59,4 +59,25 @@ test('network policy accepts Unicode executable paths and rejects invalid or emp
  assert.throws(()=>encodePolicy('apps',[]),{code:'selectApps'});
  assert.throws(()=>encodePolicy('apps',['\\\\host\\bad.exe']),{code:'invalidApp'});
  assert.equal(encodePolicy('system').length,16);
+});
+test('startup migrates an existing app policy atomically without unlocking it',async()=>{
+ const lock=new NetworkLock('unused','unused'),calls=[];
+ lock.refresh=async()=>{lock.state={active:true,mode:'apps',complete:true};return lock.state;};
+ lock.arm=async options=>{calls.push(options);return lock.state;};
+ lock.unlock=async()=>assert.fail('Migration must not unlock');
+ await lock.refreshForStartup({mode:'apps',apps:['C:\\Apps\\selected.exe']});
+ assert.deepEqual(calls,[{mode:'apps',apps:['C:\\Apps\\selected.exe']}]);
+});
+test('startup leaves inactive and system-wide policies untouched',async()=>{
+ for(const state of [{active:false},{active:true,mode:'system'}]){
+  const lock=new NetworkLock('unused','unused');lock.refresh=async()=>{lock.state=state;return state;};
+  lock.arm=async()=>assert.fail('Unexpected policy replacement');
+  assert.equal(await lock.refreshForStartup({mode:'apps',apps:[]}),state);
+ }
+});
+test('scope mismatch does not silently release an existing app policy',async()=>{
+ const lock=new NetworkLock('unused','unused');lock.refresh=async()=>{lock.state={active:true,mode:'apps'};};
+ lock.arm=async()=>assert.fail('Unexpected scope change');
+ await assert.rejects(lock.refreshForStartup({mode:'system',apps:[]}),{code:'killSwitchFailed'});
+ assert.equal(lock.state.active,true);
 });

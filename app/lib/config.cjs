@@ -13,24 +13,27 @@ function buildConfig(profile, options, controller) {
   if (options.mode === 'apps' && !apps.length) throw new AppError('selectApps');
   const endpoint = structuredClone(profile.endpoint); endpoint.tag = 'vpn';
   const isEndpoint = ['wireguard','openvpn-client'].includes(endpoint.type);
-  const rules = [{ port: 53, action: 'hijack-dns' }];
+  const system = options.mode === 'system';
+  const rules = system ? [{ port: 53, action: 'hijack-dns' }] : [];
   if (options.mode === 'apps') rules.push({ process_path: apps, action: 'route', outbound: 'vpn' });
   // Do not add private-network bypasses ahead of application rules: a selected
   // application must not silently leak private-range destinations to the LAN.
   const config = {
     log: { level: 'warn', timestamp: false },
     dns: {
-      servers: [
+      servers: system ? [
         // Modern DNS transports dial directly by default. An explicit detour to
         // an empty direct outbound is rejected at runtime by sing-box 1.14.
         { type: 'udp', tag: 'bootstrap', server: '1.1.1.1', server_port: 53 },
         { type: 'tls', tag: 'secure-dns', server: '1.1.1.1', server_port: 853, tls: { enabled: true, server_name: 'cloudflare-dns.com' }, detour: 'vpn' }
-      ],
-      final: 'secure-dns', strategy: 'prefer_ipv4'
+      ] : [{ type: 'local', tag: 'bootstrap', prefer_go: true }],
+      final: system ? 'secure-dns' : 'bootstrap', strategy: 'prefer_ipv4'
     },
     inbounds: [{ type: 'tun', tag: 'azadi-tun', interface_name: 'AzadiConnect',
       address: ['172.29.215.1/30','fd72:98c4:51af::1/126'], mtu: 1400,
-      auto_route: true, strict_route: true, stack: 'mixed' }],
+      // Shared Windows DNS must remain on LAN/Wi-Fi in app mode. strict_route
+      // would block non-TUN DNS; default dns_mode would replace adapter DNS.
+      auto_route: true, strict_route: system, dns_mode: system ? 'hijack' : 'disabled', stack: 'mixed' }],
     outbounds: [{ type: 'direct', tag: 'direct' }, ...(isEndpoint ? [] : [endpoint])],
     route: { auto_detect_interface: true, default_domain_resolver: 'bootstrap', rules,
       final: options.mode === 'system' ? 'vpn' : 'direct' },
@@ -38,7 +41,7 @@ function buildConfig(profile, options, controller) {
       access_control_allow_origin: ['http://azadi.invalid'], access_control_allow_private_network: false } }
   };
   if (isEndpoint) config.endpoints = [endpoint];
-  if (profile.dns?.length && isIP(profile.dns[0])) config.dns.servers[1] = { type: 'udp', tag: 'secure-dns', server: profile.dns[0], server_port: 53, detour: 'vpn' };
+  if (system && profile.dns?.length && isIP(profile.dns[0])) config.dns.servers[1] = { type: 'udp', tag: 'secure-dns', server: profile.dns[0], server_port: 53, detour: 'vpn' };
   return config;
 }
 module.exports = { buildConfig, normalizeApp };

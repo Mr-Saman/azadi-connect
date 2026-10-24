@@ -50,6 +50,16 @@ class NetworkLock {
       return this.state;
     } finally {await fs.unlink(filename).catch(()=>{});}
   }
+  async refreshForStartup(options) {
+    await this.refresh();
+    // Atomically replace old app policies (including their global DNS block)
+    // with this version's exact app scope. Never briefly unlock the apps.
+    if(this.state.active && this.state.mode==='apps') {
+      if(options.mode!=='apps')throw new AppError('killSwitchFailed');
+      await this.arm({mode:'apps',apps:options.apps});
+    }
+    return this.state;
+  }
   async unlock() {await this.invoke('unlock');return await this.refresh();}
 }
 module.exports={NetworkLock,encodePolicy};

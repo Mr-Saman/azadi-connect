@@ -266,7 +266,7 @@ static DWORD arm(UINT32 mode,UINT32 count,wchar_t **apps) {
     /* Missing adapter means block first. A second atomic arm after startup
        inserts its actual LUID; a guessed interface name is never permitted. */
     ConvertInterfaceAliasToLuid(L"AzadiConnect",&tun);
-    UINT32 expected=4*(3+(tun.Value?1:0)+(mode==1?3:count+2));
+    UINT32 expected=4*(3+(tun.Value?1:0)+(mode==1?3:count));
     context=((UINT64)expected<<32)|mode;
     DWORD code=check(FwpmTransactionBegin0(engine,0),"transaction-begin");
     if(code)return code;
@@ -315,12 +315,8 @@ static DWORD arm(UINT32 mode,UINT32 count,wchar_t **apps) {
             if((code=addFilter(layers[i],FWP_ACTION_BLOCK,1,NULL,0,L"Azadi Connect: block physical traffic")))goto abort;
         } else {
             for(UINT32 j=0;j<count;j++)if((code=appRule(layers[i],apps[j],FWP_ACTION_BLOCK,10)))goto abort;
-            /* Windows' shared ordinary DNS is protected globally in app mode.
-               DoH in an unselected application follows that application's scope. */
-            for(UINT16 port=53;port<=853;port+=800) {
-                c[0]=condition(&FWPM_CONDITION_IP_REMOTE_PORT,FWP_UINT16);c[0].conditionValue.uint16=port;
-                if((code=addFilter(layers[i],FWP_ACTION_BLOCK,5,c,1,L"Azadi Connect: ordinary DNS")))goto abort;
-            }
+            /* Shared Windows DNS belongs to the physical network. App scope
+               must never install a global port block affecting other apps. */
         }
     }
     return check(FwpmTransactionCommit0(engine),"transaction-commit");
