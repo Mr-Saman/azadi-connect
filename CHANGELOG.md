@@ -5,6 +5,7 @@
 - Fix WireGuard UDP6 bind/update failures for IPv4 peers using an automatic source port: use a non-empty direct transport with the core's connected UDP client bind instead of the standard dual socket bind.
 - Resolve peer hostnames before tunnel setup with IPv4 preference; preserve saved profiles, inner IPv6 and AllowedIPs.
 - Read native IPv6 default-route availability; fail unselected TUN IPv6 quickly when absent while retaining selected IPv6 in the VPN.
+- Keep the real core error behind HTTP 504 and preserve the diagnostic stage even when background connection logs are full.
 - Try an IPv4 HTTPS health target and a second independent target through the VPN; require a finite non-negative delay and retain honest failure reporting.
 - Add a real encrypted WireGuard handshake regression on disposable Windows with physical IPv6 disabled, adapter rebind and wrong-key checks.
 

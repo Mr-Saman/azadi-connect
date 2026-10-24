@@ -56,7 +56,12 @@ class Engine extends EventEmitter {
   }
   async api(route, timeout = 3000) {
     const response = await this.request(`http://127.0.0.1:${this.controller.port}${route}`, { headers: { Authorization: `Bearer ${this.controller.secret}` }, signal: AbortSignal.timeout(timeout) });
-    if (!response.ok) throw new Error('engine-api HTTP '+response.status); return response.json();
+    if (!response.ok) {
+      let reason='';
+      try{const body=await response.json();if(typeof body?.message==='string')reason=body.message.slice(0,1000);}catch{}
+      throw new Error('engine-api HTTP '+response.status+(reason?' · '+reason:''));
+    }
+    return response.json();
   }
   async connect(profile,options) {
     if(this.busy||this.child)throw new AppError('connectionBusy');
@@ -64,7 +69,8 @@ class Engine extends EventEmitter {
     this.update({status:'connecting',upload:0,download:0,latency:null,startedAt:null,error:null,detail:null,profileId:profile.id});
     let stage='integrity',secrets=profileSecrets(profile),lastError='',termination='';
     const capture=b=>{lastError=scrub(lastError+String(b),secrets);};
-    const detail=e=>scrub('stage='+stage+'\n'+(termination?termination+'\n':'')+(e?.message&&e.message!==e.code?e.message+'\n':'')+lastError,secrets);
+    // Preserve the reason and stage even when unrelated app errors fill logs.
+    const detail=e=>scrub('stage='+stage+'\n'+(termination?termination+'\n':'')+(e?.message&&e.message!==e.code?e.message:'') ,secrets).slice(0,1200)+(lastError?'\n'+scrub(lastError,secrets).slice(-2700):'');
     try {
       await this.verifyCore();
       this.controller={port:await freePort(),secret:crypto.randomBytes(32).toString('hex')};

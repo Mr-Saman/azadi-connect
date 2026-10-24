@@ -6,7 +6,7 @@ Version: **0.4.1 Preview**. Engine: **sing-box 1.14.3**.
 
 | Check | What it establishes |
 | --- | --- |
-| `npm test` | 28 checks: protocol parsing, rejected unsafe/unsupported inputs, exact app-path rules, DNS routing policy and redaction behavior |
+| `npm test` | 29 checks: protocol parsing, rejected unsafe/unsupported inputs, exact app-path rules, DNS routing policy and redaction behavior |
 | `npm run check:engine` | 22 generated profile/mode combinations accepted by the pinned engine’s checker |
 | `npm run test:ui` | 11 checks: RTL/LTR, local fonts, themes, fixed chrome, overview fitting 980×740 and 1240×850, scrolling long lists, search, icons/fallback, localized support and shortcut/pin action, errors and safe text rendering |
 | `npm run test:startup` (Windows) | Four actual generated DNS/mode combinations initialize without deprecated cache warnings or the invalid direct-detour fatal error; synthetic WireGuard endpoint, no TUN or host DNS/route changes |

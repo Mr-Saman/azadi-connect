@@ -53,7 +53,7 @@ async function restoreBindings(){for(const name of bindings)await ps('Enable-Net
   }});await engine.initialize();
   const options={mode:'apps',apps:[path.join(root,'test-output/network-probe.exe')]};
   await engine.connect(makeProfile(serverKey.publicKey),options);
-  assert.equal(engine.state.status,'connected');assert.equal(engine.state.ipv4Compatibility,true);assert.ok(requests>0);
+  assert.equal(engine.state.status,'connected');assert.equal(engine.state.ipv4Compatibility,true,'Native IPv6 detection did not report IPv4 compatibility');assert.ok(requests>0,'TLS fixture received no request');
   assert.doesNotMatch(clientLogs,/unable to update bind|listen udp6.*invalid argument/i);
   console.log('PASS actual WireGuard handshake and certificate-validated HTTPS over encrypted UDP4 with physical IPv6 disabled, using production Engine + TUN');
   await restoreBindings();await pause(1000);
@@ -65,7 +65,7 @@ async function restoreBindings(){for(const name of bindings)await ps('Enable-Net
   await assert.rejects(engine.connect(makeProfile(wrongKey.publicKey),options),{code:'healthFailed'});
   assert.equal(engine.state.status,'error');assert.equal(requests,validRequests);
   console.log('PASS wrong WireGuard key fails the probe and never falls back to a direct connection');
- }catch(e){console.error(scrub(e.message+'\nServer: '+serverLogs+'\nClient: '+clientLogs,secrets));throw e;}
+ }catch(e){console.error('Failure: '+scrub(e.message,secrets));console.error('Server: '+scrub(serverLogs,secrets));console.error('Client: '+scrub(clientLogs,secrets));throw e;}
  finally{
   await engine?.stop();
   if(server&&server.exitCode===null){server.stdin.end('stop');await Promise.race([new Promise(r=>server.once('close',r)),pause(6000)]);if(server.exitCode===null)server.kill('SIGKILL');}

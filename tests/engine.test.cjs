@@ -65,6 +65,12 @@ test('invalid delay values from every target cannot become a connected VPN',asyn
  await assert.rejects(engine.connect(profile,{mode:'system'}),{code:'healthFailed'});
  assert.equal(engine.state.status,'error');assert.equal(engine.child,null);
 });
+test('a 504 retains the core error reason and stage despite a full log buffer',async t=>{
+ const {engine}=await fixture(t,{onRun:p=>p.stderr.write('background connection failure\n'.repeat(200)),fetch:async url=>url.includes('/delay')?{ok:false,status:504,json:async()=>({message:'x509: certificate validation failed secret-test-123'})}:{ok:true,json:async()=>({})}});
+ await assert.rejects(engine.connect(profile,{mode:'system'}),{code:'healthFailed'});
+ assert.match(engine.state.detail,/^stage=probe/);assert.match(engine.state.detail,/x509: certificate validation failed/);
+ assert.ok(!engine.state.detail.includes('secret-test-123'));
+});
 test('WireGuard bootstrap prefers IPv4 and never changes the saved profile',async()=>{
  const p={endpoint:{type:'wireguard',peers:[{address:'vpn.example',allowed_ips:['0.0.0.0/0','::/0']}]}};
  const result=await prepareTransportProfile(p,async()=>[{address:'2001:db8::1',family:6},{address:'192.0.2.1',family:4}]);
