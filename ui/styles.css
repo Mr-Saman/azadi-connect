@@ -71,3 +71,5 @@ img.logo-mini{width:23px;height:23px}img.logo-mark{background:none;box-shadow:no
 
 .session-tools{display:flex;align-items:center;gap:12px;padding:12px 18px;margin-bottom:14px;flex-wrap:wrap}.session-tools small{color:var(--muted);font-size:11px}.session-tools select{width:auto;min-width:110px}.session-tools label{font-weight:600}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+.toast{display:flex;align-items:center;gap:16px;white-space:pre-line;max-width:min(520px,90vw)}.toast-dismiss{border:0;background:transparent;color:inherit;cursor:pointer;font-size:24px;line-height:1;padding:6px}.toast-dismiss:focus-visible{outline:2px solid currentColor;border-radius:8px}.state-badge.connected{box-shadow:0 0 22px #20d9ad26}.setting-row #update-status{font-size:12px;display:block;margin-top:6px}

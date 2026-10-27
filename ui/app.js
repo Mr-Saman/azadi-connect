@@ -22,7 +22,20 @@ async function loadAppIcons(){
 const t=key=>window.messages[state.language]?.[key] || window.messages.en[key] || key;
 const el=(tag,cls,content)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(content!==undefined)e.textContent=content;return e;};
 function iconElement(name,cls=''){const e=el('span',cls);e.innerHTML=window.icon(name);return e;}
-function toast(message,error=false){const e=$('toast');e.textContent=message;e.classList.toggle('error',error);e.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.classList.remove('visible'),7000);}
+const toastQueue=[];
+function toast(message,error=false){
+ if(toastQueue.some(item=>item.message===message)||toast.current===message)return;
+ toastQueue.push({message,error});if(!toast.current)showToast();
+}
+function showToast(){
+ const item=toastQueue.shift();if(!item){toast.current=null;return;}
+ toast.current=item.message;const box=$('toast');box.replaceChildren(el('span','',item.message));
+ const dismiss=el('button','toast-dismiss','×');dismiss.type='button';dismiss.setAttribute('aria-label',t('dismiss'));
+ const close=()=>{clearTimeout(toast.timer);box.classList.remove('visible');toast.current=null;setTimeout(showToast,180);};
+ dismiss.addEventListener('click',close);box.append(dismiss);box.classList.toggle('error',item.error);box.classList.add('visible');
+ box.setAttribute('role',item.error?'alert':'status');box.setAttribute('aria-live',item.error?'assertive':'polite');
+ toast.timer=setTimeout(close,item.error?10000:5000);
+}
 async function call(name,...args){
  if(!api){toast(t('preview'));return null;}
  try{
@@ -94,6 +107,9 @@ function render(){
  $('mode-apps').classList.toggle('selected',state.mode==='apps');$('mode-system').classList.toggle('selected',state.mode==='system');$('mode-apps').disabled=locked;$('mode-system').disabled=locked;
  $('add-app').disabled=locked;$('running-apps').disabled=locked;document.querySelectorAll('.import-trigger').forEach(e=>e.disabled=locked);
  appRows($('quick-app-list'),2);appRows($('apps-list'));renderRunningApps();renderProfiles();loadAppIcons();
+ if(state.update?.error&&render.lastUpdateError!==state.update.error)toast(t(state.update.error),true);render.lastUpdateError=state.update?.error;
+ if(render.lastStatus&&render.lastStatus!==status&&['connected','disconnected'].includes(status))toast(t(status));
+ render.lastStatus=status;
  if(state.connection.error && render.lastError!==state.connection.error){toast(t(state.connection.error),true);}render.lastError=state.connection.error;
 }
 function openImport(){$('import-dialog').showModal();$('profile-text').focus();}

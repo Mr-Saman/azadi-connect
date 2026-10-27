@@ -203,6 +203,9 @@ app.whenReady().then(async()=>{
   });
   updater=new Updater(app.getVersion(),path.join(app.getPath('userData'),'updates'),(...args)=>electronNet.fetch(...args),notify);
   wireHandlers(); await window.loadFile(uiPath);window.show();
+  if(app.isPackaged&&process.platform==='win32'){
+    const check=setTimeout(()=>{if(!updater.busy&&updater.state.status==='idle')updater.run('check').catch(()=>{});},15000);check.unref();
+  }
   window.on('close',event=>{if(!quitting){event.preventDefault();window.hide();}});
   tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'../ui/assets/tray.png')));tray.on('double-click',()=>window.show());updateTray();
 }).catch(e=>{dialog.showErrorBox('Azadi Connect',e.code==='vaultLocked'?'The encrypted vault could not be opened by this Windows user.':'Secure initialization failed. '+(e.code || 'startupError'));quitting=true;app.quit();});
