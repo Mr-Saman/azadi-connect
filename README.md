@@ -306,6 +306,6 @@ The generated bootstrap DNS transport now uses its own default direct dialer. An
 ### Development validation and platform limits
 
 - **Linux / Node.js 24+:** `npm ci --ignore-scripts`, then `npm test`. Unit coverage includes import validation, routing configuration, engine lifecycle, preferences, timers, update checksums and translation parity.
-- **UI:** `npm run test:ui` uses Chromium and mocked desktop IPC. It does not validate Windows networking. Tests regenerate screenshots under `docs/screenshots`; preserve local work or run in a disposable copy.
+- **UI:** `npm run test:ui` uses Chromium and mocked desktop IPC. It does not validate Windows networking. Tests use a loopback-only HTTP fixture and regenerate screenshots under `docs/screenshots`. Set `AZADI_SCREENSHOT_DIR` to a scratch directory to preserve tracked screenshots.
 - **Windows:** follow the build instructions above and the pinned Windows CI workflow for native helpers, TUN/WFP routing, installer and real Electron startup.
-- **Current cloud review:** unit tests execute here. Managed Chromium blocks file-based navigation, so UI checks cannot complete in this environment. Windows installation, elevation and end-to-end updating must be validated on Windows before publishing a release.
+- **Current cloud review:** all 36 unit tests and 13 browser UI tests pass. Browser tests use loopback HTTP, which is permitted by the managed Chromium policy, without changing production Electron navigation. Windows installation, elevation and end-to-end updating must still pass the Windows CI workflow before publishing a release.

@@ -2,15 +2,19 @@ const {test,expect}=require('@playwright/test');
 const path=require('node:path');
 const fs=require('node:fs');
 const testIcon='data:image/png;base64,'+fs.readFileSync(path.resolve(__dirname,'../../ui/assets/tray.png')).toString('base64');
-const {pathToFileURL}=require('node:url');
+const {startUiServer}=require('./server.cjs');
 const root=path.resolve(__dirname,'../..');
+const screenshots=process.env.AZADI_SCREENSHOT_DIR||path.join(root,'docs/screenshots');
+let server;
+test.beforeAll(async()=>{server=await startUiServer(path.join(root,'ui'));});
+test.afterAll(async()=>{await server?.close();});
 test.beforeEach(async({page})=>{
  await page.addInitScript(icon=>{
   let state={version:'0.4.1',profiles:[],apps:[],language:'fa',theme:'dark',mode:'apps',connection:{status:'disconnected',upload:0,download:0},encryption:true};
   const response=()=>Promise.resolve({ok:true,data:structuredClone(state)});
   window.azadi={state:response,onState:()=>{},preferences:changes=>{Object.assign(state,changes);return response();},importText:raw=>{state.profiles.push({id:'example',name:raw,protocol:'vless',server:'example.invalid'});state.selectedId='example';return response();},selectProfile:id=>{state.selectedId=id;return response();},deleteProfile:()=>{state.profiles=[];return response();},connect:()=>Promise.resolve({ok:false,error:'selectApps'}),disconnect:response,window:response,openProject:response,appIcons:()=>Promise.resolve({ok:true,data:state.apps.map(path=>({path,icon}))}),runningApps:()=>Promise.resolve({ok:true,data:[{path:'C:\\Example\\example.exe',name:'example.exe',icon},{path:'C:\\Tools\\Reader.exe',name:'Reader.exe',icon:null},{path:'C:\\Browser\\firefox.exe',name:'firefox.exe',icon}]}),chooseApp:p=>{state.apps.push(p);return response();}};
  },testIcon);
- await page.goto(pathToFileURL(path.join(root,'ui/index.html')).href);
+ await page.goto(server.url);
  await page.evaluate(()=>document.fonts.ready);
 });
 test('Persian uses local Vazir, RTL and visible dual-language Iran footer',async({page})=>{
@@ -19,13 +23,13 @@ test('Persian uses local Vazir, RTL and visible dual-language Iran footer',async
  expect(await page.evaluate(()=>document.fonts.check('12px Vazir'))).toBeTruthy();
  await expect(page.locator('.for-iran')).toContainText('برای ایران');await expect(page.locator('.for-iran')).toContainText('For Iran');
  const b=await page.locator('footer').boundingBox();expect(b.y+b.height).toBeLessThanOrEqual(850);
- await page.screenshot({animations:'disabled',path:path.join(root,'docs/screenshots/persian-dark.png')});
+ await page.screenshot({animations:'disabled',path:path.join(screenshots,'persian-dark.png')});
 });
 test('English changes direction, text and font; light theme works',async({page})=>{
  await page.locator('#language').click();await expect(page.locator('html')).toHaveAttribute('dir','ltr');await expect(page.locator('h1')).toHaveText('Connect on your terms.');
  expect(await page.evaluate(()=>getComputedStyle(document.body).fontFamily)).toMatch(/^Inter/);
- await page.screenshot({animations:'disabled',path:path.join(root,'docs/screenshots/english-dark.png')});
- await page.locator('#theme').click();await expect(page.locator('html')).toHaveAttribute('data-theme','light');await page.screenshot({animations:'disabled',path:path.join(root,'docs/screenshots/english-light.png')});
+ await page.screenshot({animations:'disabled',path:path.join(screenshots,'english-dark.png')});
+ await page.locator('#theme').click();await expect(page.locator('html')).toHaveAttribute('data-theme','light');await page.screenshot({animations:'disabled',path:path.join(screenshots,'english-light.png')});
 });
 test('imported profile names render as text and cannot inject HTML',async({page})=>{
  await page.locator('.import-trigger').first().click();await page.locator('#profile-text').fill('<img src=x onerror="window.injected=true">');await page.locator('#paste-import').click();
@@ -47,7 +51,7 @@ test('Kill Switch is optional and changing the preference alone does not claim a
  await page.locator('#kill-switch').check();
  await expect(page.locator('#kill-switch')).toBeChecked();
  await expect(page.locator('#network-lock-banner')).toBeHidden();
- await page.screenshot({animations:'disabled',path:path.join(root,'docs/screenshots/kill-switch.png')});
+ await page.screenshot({animations:'disabled',path:path.join(screenshots,'kill-switch.png')});
 });
 test('engine details stay visible as text and persistent protection has explicit recovery',async({page})=>{
  await page.evaluate(()=>{
@@ -62,7 +66,7 @@ test('engine details stay visible as text and persistent protection has explicit
  await expect(page.locator('#error-message')).not.toContainText('kill switch');
  await expect(page.locator('#network-lock-banner')).toBeVisible();await expect(page.locator('#mode-apps')).toBeDisabled();
  await page.locator('#copy-diagnostics').click();expect(await page.evaluate(()=>window.copied)).toBeTruthy();
- await page.screenshot({animations:'disabled',path:path.join(root,'docs/screenshots/diagnostics.png')});
+ await page.screenshot({animations:'disabled',path:path.join(screenshots,'diagnostics.png')});
  await page.locator('#restore-network').click();await expect(page.locator('#network-lock-banner')).toBeHidden();
  await expect(page.locator('#footer-status')).toHaveText('Direct internet');await expect(page.locator('#mode-apps')).toBeEnabled();
 });
@@ -94,7 +98,7 @@ test('application search filters running and selected apps, with native icons an
  await page.locator('#app-search').fill('no-such-application');await expect(page.locator('#running-list .item-row')).toHaveCount(0);
  await page.locator('#app-search').fill('');await expect(page.locator('#running-list .item-row')).toHaveCount(3);
  await page.locator('#language').click();await expect(page.locator('#app-search')).toHaveAttribute('placeholder','Search by app name or file path…');
- await page.screenshot({animations:'disabled',path:path.join(root,'docs/screenshots/applications.png')});
+ await page.screenshot({animations:'disabled',path:path.join(screenshots,'applications.png')});
 });
 test('GitHub support is localized and opens only through the project action',async({page})=>{
  await page.evaluate(()=>{window.azadi.openProject=async()=>{window.projectOpened=true;return{ok:true,data:true};};});
