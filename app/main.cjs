@@ -52,7 +52,7 @@ function snapshot() {
 }
 function notify() { if(window && !window.isDestroyed()) window.webContents.send('state-change',snapshot()); updateTray(); }
 async function save() { await vault.write(data); notify(); return snapshot(); }
-function idle() { if(engine.child || engine.busy || networkLock.state.active) throw new AppError('disconnectFirst'); }
+function idle() { if(engine.child || engine.busy || networkLock.state.active || networkLock.state.unknown) throw new AppError('disconnectFirst'); }
 function handler(name, fn, mutation = false) {
   ipcMain.handle(name,async(event,...args)=>{
     if(event.sender !== window.webContents || event.senderFrame?.url !== uiUrl) return {ok:false,error:'untrustedWindow'};
@@ -125,6 +125,7 @@ function wireHandlers() {
   },true);
   handler('connect',async()=>{
     if(process.platform!=='win32')throw new AppError('windowsOnly');
+    if(networkLock.state.unknown)throw new AppError('killSwitchFailed');
     if(!safeStorage.isEncryptionAvailable())throw new AppError('encryptionUnavailable');
     const p=data.profiles.find(p=>p.id===data.selectedId);if(!p)throw new AppError('selectProfile');
     await engine.connect(p,{mode:data.mode,apps:data.apps,killSwitch:!!data.killSwitch});return snapshot();

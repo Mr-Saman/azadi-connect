@@ -46,7 +46,7 @@ function appRows(target,limit){
  if(!files.length){empty(target,'noMatches','noMatchesSub');return;}
  for(const filename of files){
   const name=filename.split('\\').pop();const row=el('div','item-row');row.append(appAvatar(filename));const meta=el('div','item-meta');meta.append(el('strong','',name),el('small','',filename));row.append(meta,el('span','protocol-pill',t(state.mode==='system'||state.apps.includes(filename)?'viaVpn':'direct')));
-  if(!limit){const remove=el('button','icon-button remove');remove.innerHTML=window.icon('trash');remove.setAttribute('aria-label',t('delete')+' '+name);remove.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;remove.addEventListener('click',()=>call('removeApp',filename));row.append(remove);}target.append(row);
+  if(!limit){const remove=el('button','icon-button remove');remove.innerHTML=window.icon('trash');remove.setAttribute('aria-label',t('delete')+' '+name);remove.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active||!!state.networkLock?.unknown;remove.addEventListener('click',()=>call('removeApp',filename));row.append(remove);}target.append(row);
  }
 }
 function renderRunningApps(){
@@ -58,19 +58,19 @@ function renderRunningApps(){
  for(const filename of files){
   const row=el('div','item-row'),meta=el('div','item-meta');meta.append(el('strong','',filename.split('\\').pop()),el('small','',filename));
   const add=el('button','button secondary',t(hasApp(filename)?'added':'addApp'));
-  add.disabled=hasApp(filename)||['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;
+  add.disabled=hasApp(filename)||['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active||!!state.networkLock?.unknown;
   add.addEventListener('click',()=>call('chooseApp',filename));row.append(appAvatar(filename),meta,add);target.append(row);
  }
 }
 function renderProfiles(){
  const target=$('profiles-list');target.replaceChildren();if(!state.profiles.length){empty(target,'noProfiles','noProfilesSub',{label:'import',click:openImport});return;}
- for(const p of state.profiles){const row=el('div','item-row');row.append(iconElement('globe','app-avatar'));const meta=el('div','item-meta');meta.append(el('strong','',p.name),el('small','',p.server));row.append(meta,el('span','protocol-pill',p.protocol));const actions=el('div','row-actions');const select=el('button','button secondary',t(p.id===state.selectedId?'selected':'select'));select.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active||p.id===state.selectedId;select.addEventListener('click',()=>call('selectProfile',p.id));const remove=el('button','icon-button remove');remove.innerHTML=window.icon('trash');remove.setAttribute('aria-label',t('delete')+' '+p.name);remove.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;remove.addEventListener('click',()=>{if(window.confirm(t('confirmDelete')))call('deleteProfile',p.id);});actions.append(select,remove);row.append(actions);target.append(row);}
+ for(const p of state.profiles){const row=el('div','item-row');row.append(iconElement('globe','app-avatar'));const meta=el('div','item-meta');meta.append(el('strong','',p.name),el('small','',p.server));row.append(meta,el('span','protocol-pill',p.protocol));const actions=el('div','row-actions');const select=el('button','button secondary',t(p.id===state.selectedId?'selected':'select'));select.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active||!!state.networkLock?.unknown||p.id===state.selectedId;select.addEventListener('click',()=>call('selectProfile',p.id));const remove=el('button','icon-button remove');remove.innerHTML=window.icon('trash');remove.setAttribute('aria-label',t('delete')+' '+p.name);remove.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active||!!state.networkLock?.unknown;remove.addEventListener('click',()=>{if(window.confirm(t('confirmDelete')))call('deleteProfile',p.id);});actions.append(select,remove);row.append(actions);target.append(row);}
 }
 function render(){
  const language=state.language==='en'?'en':'fa';document.documentElement.lang=language;document.documentElement.dir=language==='fa'?'rtl':'ltr';document.documentElement.dataset.theme=state.theme;
  document.querySelectorAll('[data-i18n]').forEach(e=>{e.textContent=t(e.dataset.i18n);});document.querySelectorAll('[data-i18n-placeholder]').forEach(e=>e.placeholder=t(e.dataset.i18nPlaceholder));updateTitles();
  $('language').textContent=language==='fa'?'EN ⇄':'فا ⇄';$('profile-count').textContent=state.profiles.length.toLocaleString(language==='fa'?'fa-IR':'en-US');
- const status=state.connection.status;const active=status==='connected';const busy=status==='connecting';const locked=active||busy||state.networkLock?.active;
+ const status=state.connection.status;const active=status==='connected';const busy=status==='connecting';const locked=active||busy||state.networkLock?.active||state.networkLock?.unknown;
  $('state-badge').textContent=t(status);$('state-badge').className='state-badge '+status;$('orbital').className='orbital '+status;
  $('status-title').textContent=t(status);$('status-caption').textContent=t(status+'Caption');$('connect-label').textContent=t(active?'disconnect':busy?'connecting':'connect');
  $('connect').disabled=busy;$('power').disabled=busy;$('connect').classList.toggle('secondary',active);$('power').setAttribute('aria-label',t(active?'disconnect':'connect'));
@@ -116,7 +116,7 @@ $('running-apps').addEventListener('click',async()=>{
  try{
   const items=await call('runningApps');if(!items)return;
   rememberIcons(items);runningApps=items.map(item=>typeof item==='string'?item:item.path).filter(Boolean);renderRunningApps();
- }finally{button.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active;button.removeAttribute('aria-busy');}
+ }finally{button.disabled=['connected','connecting'].includes(state.connection.status)||!!state.networkLock?.active||!!state.networkLock?.unknown;button.removeAttribute('aria-busy');}
 });
 const setLanguage=language=>call('preferences',{language});const setTheme=()=>call('preferences',{theme:state.theme==='dark'?'light':'dark'});
 $('language').addEventListener('click',()=>setLanguage(state.language==='fa'?'en':'fa'));$('set-fa').addEventListener('click',()=>setLanguage('fa'));$('set-en').addEventListener('click',()=>setLanguage('en'));$('theme').addEventListener('click',setTheme);$('set-theme').addEventListener('click',setTheme);
