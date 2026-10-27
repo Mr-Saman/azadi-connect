@@ -112,3 +112,22 @@ test('localized pin action reveals the installed shortcut and explains the Windo
  await page.locator('#language').click();await expect(page.locator('#open-shortcuts')).toHaveText('Show shortcut to pin');
  await page.locator('#open-shortcuts').click();await expect(page.locator('#toast')).toContainText('Pin to taskbar');
 });
+
+test('session timer is disabled until connected and update center exposes download state',async({page})=>{
+ await page.locator('[data-page=settings]').click();
+ await expect(page.locator('#session-timer')).toBeDisabled();
+ await page.evaluate(async()=>{
+  window.azadi.state=async()=>({ok:true,data:{version:'0.4.1',profiles:[],apps:[],language:'en',theme:'dark',mode:'apps',connection:{status:'connected',startedAt:Date.now()},update:{status:'available',version:'0.5.0'}}});
+  await call('state');
+ });
+ await expect(page.locator('#session-timer')).toBeEnabled();
+ await expect(page.locator('#update-action')).toHaveText('Download update');
+ await expect(page.locator('#update-status')).toContainText('0.5.0');
+});
+test('floating errors are dismissible and cannot inject markup',async({page})=>{
+ await page.evaluate(()=>toast('<img src=x onerror=alert(1)>',true));
+ await expect(page.locator('#toast')).toHaveAttribute('role','alert');
+ await expect(page.locator('#toast img')).toHaveCount(0);
+ await page.locator('#toast button').click();
+ await expect(page.locator('#toast')).not.toHaveClass(/visible/);
+});

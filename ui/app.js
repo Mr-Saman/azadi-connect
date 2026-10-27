@@ -31,7 +31,7 @@ function showToast(){
  const item=toastQueue.shift();if(!item){toast.current=null;return;}
  toast.current=item.message;const box=$('toast');box.replaceChildren(el('span','',item.message));
  const dismiss=el('button','toast-dismiss','×');dismiss.type='button';dismiss.setAttribute('aria-label',t('dismiss'));
- const close=()=>{clearTimeout(toast.timer);box.classList.remove('visible');toast.current=null;setTimeout(showToast,180);};
+ let closed=false;const close=()=>{if(closed)return;closed=true;clearTimeout(toast.timer);box.classList.remove('visible');setTimeout(()=>{toast.current=null;showToast();},180);};
  dismiss.addEventListener('click',close);box.append(dismiss);box.classList.toggle('error',item.error);box.classList.add('visible');
  box.setAttribute('role',item.error?'alert':'status');box.setAttribute('aria-live',item.error?'assertive':'polite');
  toast.timer=setTimeout(close,item.error?10000:5000);
