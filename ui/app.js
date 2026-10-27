@@ -34,7 +34,7 @@ async function call(name,...args){
 function navigate(value){page=value;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('active',e.id==='view-'+page));document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.page===page));updateTitles();$('workspace-content').scrollTop=0;}
 function updateTitles(){$('page-title').textContent=t(page+'Title');$('page-subtitle').textContent=t(page+'Sub');}
 function formatBytes(bytes){if(!bytes)return '0 B';const i=Math.min(3,Math.floor(Math.log(bytes)/Math.log(1024)));return (bytes/1024**i).toFixed(i?1:0)+' '+['B','KB','MB','GB'][i];}
-function duration(){const seconds=state.connection.startedAt?Math.max(0,Math.floor((Date.now()-state.connection.startedAt)/1000)):0;$('duration').textContent=[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(s=>String(s).padStart(2,'0')).join(':');}
+function duration(){if($('timer-remaining'))$('timer-remaining').textContent=state.disconnectAt?Math.max(0,Math.ceil((state.disconnectAt-Date.now())/60000))+' min':'';const seconds=state.connection.startedAt?Math.max(0,Math.floor((Date.now()-state.connection.startedAt)/1000)):0;$('duration').textContent=[Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(s=>String(s).padStart(2,'0')).join(':');}
 function empty(target,title,subtitle,action){
  const row=el('div','empty');row.append(iconElement('layers','empty-icon'));const content=el('div');content.append(el('strong','',t(title)),el('p','',t(subtitle)));row.append(content);
  if(action){const button=el('button','button secondary',t(action.label));button.addEventListener('click',action.click);row.append(button);}target.append(row);
@@ -75,6 +75,7 @@ function render(){
  $('status-title').textContent=t(status);$('status-caption').textContent=t(status+'Caption');$('connect-label').textContent=t(active?'disconnect':busy?'connecting':'connect');
  $('connect').disabled=busy;$('power').disabled=busy;$('connect').classList.toggle('secondary',active);$('power').setAttribute('aria-label',t(active?'disconnect':'connect'));
  $('download').textContent=formatBytes(state.connection.download);$('upload').textContent=formatBytes(state.connection.upload);$('latency').textContent=(state.connection.latency??'—')+' ms';duration();
+ $('session-timer').disabled=!active; if(!state.disconnectAt)$('session-timer').value='0';
  const lock=state.networkLock||{},protectedNetwork=!!lock.active;
  $('network-lock-banner').classList.toggle('hidden',!protectedNetwork&&!lock.unknown);
  $('lock-banner-title').textContent=t(lock.unknown?'lockUnknown':lock.complete===false?'lockIncomplete':'lockArmed');
@@ -122,3 +123,5 @@ $('copy-diagnostics').addEventListener('click',async()=>{if(await call('copyDiag
 $('win-min').addEventListener('click',()=>call('window','minimize'));$('win-max').addEventListener('click',()=>call('window','maximize'));$('win-close').addEventListener('click',()=>call('window','close'));$('project-link').addEventListener('click',()=>call('openProject'));$('star-project').addEventListener('click',()=>call('openProject'));
 if(api){api.onState(value=>{state=value;render();});call('state');}else render();
 setInterval(duration,1000);
+
+$('session-timer').addEventListener('change',async e=>{if(await call('setTimer',Number(e.target.value)))toast(t('timerSaved'));});

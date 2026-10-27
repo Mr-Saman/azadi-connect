@@ -2,7 +2,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const invoke = (channel,...args) => ipcRenderer.invoke(channel,...args);
 contextBridge.exposeInMainWorld('azadi',Object.freeze({
-  state:()=>invoke('state'), importFile:credentials=>invoke('import-file',credentials),
+  setTimer:minutes=>invoke('session-timer',minutes), state:()=>invoke('state'), importFile:credentials=>invoke('import-file',credentials),
   importText:(raw,credentials)=>invoke('import-text',raw,credentials),
   deleteProfile:id=>invoke('delete-profile',id), selectProfile:id=>invoke('select-profile',id),
   addApp:()=>invoke('add-app'), removeApp:filename=>invoke('remove-app',filename),

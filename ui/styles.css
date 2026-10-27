@@ -68,3 +68,6 @@ html[data-theme=light] .support-link{color:#926619}
 img.logo-mini{width:23px;height:23px}img.logo-mark{background:none;box-shadow:none;border-radius:0;object-fit:contain}
 
 .orbit-two{animation-name:orbitSpin}@keyframes orbitSpin{to{transform:translateY(-50%) rotate(360deg)}}
+
+.session-tools{display:flex;align-items:center;gap:12px;padding:12px 18px;margin-bottom:14px;flex-wrap:wrap}.session-tools small{color:var(--muted);font-size:11px}.session-tools select{width:auto;min-width:110px}.session-tools label{font-weight:600}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

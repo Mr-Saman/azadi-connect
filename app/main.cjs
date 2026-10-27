@@ -11,6 +11,8 @@ const { Engine } = require('./lib/engine.cjs');
 const { importProfiles, MAX_IMPORT } = require('./lib/importers.cjs');
 const { normalizeApp } = require('./lib/config.cjs');
 const { AppError } = require('./lib/errors.cjs');
+const {SessionTimer}=require('./lib/session-timer.cjs');
+const sessionTimer=new SessionTimer(()=>{const task=writeQueue.then(async()=>{await engine.stop();notify();});writeQueue=task.catch(()=>{engine.update({status:'error',error:'operationFailed'});});return task;},()=>{if(data)notify();});
 const exec = promisify(execFile);
 if(process.platform==='win32')app.setAppUserModelId('org.azadi.connect');
 let window, tray, vault, engine, networkLock, data, quitting = false, writeQueue = Promise.resolve();
@@ -40,7 +42,7 @@ app.on('second-instance',(_,args)=>{
   if(window){window.show();window.focus();} if(args.includes('--restore-network')){queueRecovery();}
 });
 function snapshot() {
-  return { version:app.getVersion(), platform:process.platform,
+  return { version:app.getVersion(), platform:process.platform, disconnectAt:sessionTimer.deadline,
     profiles:data.profiles.map(p=>({id:p.id,name:p.name,protocol:p.protocol,notes:p.notes,server:p.endpoint.server || p.endpoint.peers?.[0]?.address || p.endpoint.servers?.[0]?.server || ''})),
     apps:data.apps, selectedId:data.selectedId, mode:data.mode, language:data.language, theme:data.theme || 'dark',
     killSwitch:!!data.killSwitch, networkLock:{...networkLock.state}, connection:{...engine.state}, encryption:safeStorage.isEncryptionAvailable(), coreVersion:'1.14.3' };
@@ -113,7 +115,8 @@ function wireHandlers() {
     const p=data.profiles.find(p=>p.id===data.selectedId);if(!p)throw new AppError('selectProfile');
     await engine.connect(p,{mode:data.mode,apps:data.apps,killSwitch:!!data.killSwitch});return snapshot();
   },true);
-  handler('disconnect',async()=>{await engine.stop();return snapshot();},true);
+  handler('disconnect',async()=>{sessionTimer.clear();await engine.stop();return snapshot();},true);
+  handler('session-timer',async minutes=>{if(engine.state.status!=='connected')throw new AppError('timerNeedsConnection');sessionTimer.set(minutes);return snapshot();},true);
   handler('restore-network',restoreNetwork,true);
   handler('copy-diagnostics',async()=>{if(engine.state.detail)clipboard.writeText(engine.state.error+'\n'+engine.state.detail);return true;});
   handler('window',async action=>{
@@ -172,7 +175,7 @@ app.whenReady().then(async()=>{
   engine=new Engine(coreDirectory,path.join(vault.directory,'runtime'),{networkLock});
   await engine.initialize();
   try{await networkLock.refreshForStartup({mode:data.mode,apps:data.apps});if(networkLock.state.active)data.killSwitch=true;}catch{networkLock.state={...networkLock.state,unknown:true,error:'killSwitchFailed'};}
-  engine.on('state',notify);engine.on('network-lock',notify);
+  engine.on('state',()=>{if(engine.state.status!=='connected')sessionTimer.clear();notify();});engine.on('network-lock',notify);
   window=new BrowserWindow({width:1240,height:850,minWidth:980,minHeight:740,show:false,frame:false,backgroundColor:'#0b101d',
     title:'Azadi Connect',icon:path.join(__dirname,'../ui/assets/icon.png'),
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true,devTools:!app.isPackaged}});
