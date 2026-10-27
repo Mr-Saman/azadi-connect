@@ -84,6 +84,19 @@ jobs:
             dist/*-source.tar.gz
             dist/Wintun-LICENSE.txt
           if-no-files-found: error
+      - name: Publish verified version-tagged release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          if ($env:RELEASE_TAG -ne "v$version") { throw 'Release tag must match package.json' }
+          $notes = "docs/releases/$($env:RELEASE_TAG).md"
+          if (-not (Test-Path $notes)) { throw "Missing release notes: $notes" }
+          gh release create $env:RELEASE_TAG dist/*.exe dist/SHA256SUMS.txt dist/*-source.tar.gz dist/Wintun-LICENSE.txt --repo $env:GITHUB_REPOSITORY --verify-tag --latest --title "Azadi Connect $env:RELEASE_TAG" --notes-file $notes
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
       - name: Attach assets to the published matching release
         if: github.event_name == 'release'
         shell: pwsh

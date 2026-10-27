@@ -1,5 +1,16 @@
 # Changelog · تغییرات 🚀
 
+## 1.0.0
+
+- Release the tested session timers, in-app update center and dismissible notification queue.
+- Fix toast dismissal by enabling pointer events while notifications are visible.
+- Run UI tests through a loopback fixture with optional isolated screenshots.
+- Publish version-tagged releases only after Windows build, networking and installer validation succeed.
+- Include the Windows x64 installer, checksums, pinned engine source and Wintun license.
+
+نسخهٔ ۱ شامل تایمر اتصال، مرکز آپدیت داخل برنامه و پیام‌های شناور قابل بستن است.
+انتشار فایل‌ها پس از موفقیت آزمون‌های ویندوز و نصب انجام می‌شود. امضای تجاری همچنان موجود نیست.
+
 ## 0.5.0 — Preview
 
 - Add in-app stable release checks, verified installer downloads and an explicit install action.
