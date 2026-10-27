@@ -34,6 +34,29 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 > 🤖 **This project was generated entirely with ChatGPT**, including the application code, interface design, documentation and build scripts. Independent third-party software—including sing-box, Electron and the fonts—belongs to its original authors and is credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+### ✨ New in the development branch
+
+| Feature | What you get |
+| --- | --- |
+| In-app updates | Automatic release check after startup, manual check, download progress, SHA-256 verification, then an explicit installation action |
+| Session timer | Disconnect in 15, 30, 60 or 120 minutes; cancel any time while connected |
+| Floating notifications | Queued, dismissible success/error messages with screen-reader announcements |
+| Safer controls | Profile editing is disabled while protection is active; unknown network-lock state blocks new connections |
+
+These changes are source changes pending a new Windows release. Existing **0.4.1** installers do not gain them until a new build is installed.
+
+### 🔄 Update without visiting GitHub
+
+Open **Settings → Update center**. Packaged Windows builds also check for a new stable release 15 seconds after launch. Choose **Download update**, wait for verification, then **Install and restart**. Disconnect and use **Restore direct Internet** first if the persistent network lock is armed. Windows may request administrator approval.
+
+The app downloads the official full installer itself; you do not need to open GitHub or download it manually. This is **not a delta update or a silent background install**. It uses GitHub's latest stable release API and the release's `SHA256SUMS.txt`. The version, repository URL, exact asset name, size and SHA-256 must match; the file is checked again before launch. Failed downloads never become installable. Checksums protect integrity; they are not a substitute for publisher code signing. The preview remains unsigned.
+
+Release maintainers must publish a stable tag matching `package.json` and attach both `Azadi-Connect-VERSION-Windows-x64-Setup.exe` and `SHA256SUMS.txt` via the Windows release workflow. API rate limits, network restrictions, or missing release assets are reported as update failures. Update traffic uses `api.github.com`, `github.com` and GitHub's release download infrastructure. Profiles stay in the existing encrypted local vault.
+
+### ⏱️ Time-limited sessions
+
+After connecting, open **Settings → Disconnect timer** and choose a duration. A countdown shows remaining minutes. Choose **No timer** to cancel. The deadline runs in the main process, checks elapsed time after sleep, and is cleared on disconnect, connection failure or app exit. Timers are not restored after restarting the app. Automatic disconnect **does not release Kill Switch protection**; use **Restore direct Internet** when you want ordinary Internet access again.
+
 ### 🪟 Install on Windows
 
 1. Open this repository’s **Releases** page and download `Azadi-Connect-0.4.1-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.1).
@@ -133,7 +156,7 @@ npm run test:ui
 
 ### 🚀 Releases & development history
 
-The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs 29 unit checks and 11 UI checks, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. A real two-peer WireGuard fixture sends encrypted traffic with physical IPv6 disabled, checks adapter rebind and rejects a wrong key. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.4.1` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
+The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs the unit and bilingual UI suites, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. A real two-peer WireGuard fixture sends encrypted traffic with physical IPv6 disabled, checks adapter rebind and rejects a wrong key. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.4.1` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
 
 The initial implementation is developed in separate commits for the protocol core, desktop UI, validation, documentation and release packaging. Release binaries are generated from the checked-out commit, not committed into Git history.
 
@@ -208,6 +231,18 @@ The initial implementation is developed in separate commits for the protocol cor
 
 **🛡️ Kill Switch اختیاری:** پیش از اتصال آن را در تنظیمات روشن کن. فیلتر پایدار ویندوز، مسیر مستقیم برنامه‌های منتخب یا کل سیستم را می‌بندد و پس از قطع VPN، خروج یا کرش باقی می‌ماند. برای آزادکردن آن **بازیابی اینترنت مستقیم** را در برنامه یا منوی کنار ساعت بزن؛ میانبر **Start → Azadi Connect → Restore Internet** نیز مستقل از گاوصندوق پروفایل‌ها کار می‌کند. در حالت برنامه‌ها فقط فایل‌های اجرایی منتخب قفل می‌شوند؛ اینترنت و DNS عادی برنامه‌های دیگر حفظ می‌شود. [راهنمای محدودهٔ محافظت و بازیابی](docs/KILL_SWITCH.md) را بخوان. نسخه همچنان اولیه و فاقد ممیزی امنیتی مستقل است.
 
+### 🔄 آپدیت مستقیم از داخل برنامه
+
+در **تنظیمات ← مرکز به‌روزرسانی** نسخهٔ جدید را بررسی و دریافت کن. نسخهٔ نصب‌شدهٔ ویندوز، ۱۵ ثانیه پس از اجرا هم نسخهٔ پایدار را بررسی می‌کند. پس از تأیید فایل، **نصب و راه‌اندازی مجدد** را بزن. نیازی به بازکردن صفحهٔ گیت‌هاب و دانلود دستی نیست؛ برنامه نصب‌کنندهٔ کامل رسمی را دریافت می‌کند. نصب بی‌صدا یا تفاضلی نیست و تأیید ویندوز ممکن است لازم باشد.
+
+قبل از نصب، اتصال را قطع و قفل شبکه را با **بازیابی اینترنت مستقیم** آزاد کن. checksum و اندازهٔ فایل کنترل می‌شوند و پیش از اجرا دوباره هش بررسی می‌شود. نسخهٔ Preview هنوز امضای تجاری ندارد؛ checksum جای امضای ناشر را نمی‌گیرد. خطای شبکه، محدودیت GitHub یا ناقص‌بودن فایل‌های Release باعث توقف آپدیت می‌شود. این امکانات با انتشار بیلد جدید در دسترس قرار می‌گیرند؛ فایل نصب قدیمی ۰٫۴٫۱ آن‌ها را ندارد.
+
+### ⏱️ تایمر و پیام‌های شناور
+
+بعد از اتصال، از **تنظیمات ← قطع اتصال زمان‌دار** زمان ۱۵، ۳۰، ۶۰ یا ۱۲۰ دقیقه را انتخاب کن. زمان باقی‌مانده نمایش داده می‌شود و گزینهٔ **بدون تایمر** آن را لغو می‌کند. تایمر با مخفی‌شدن پنجره متوقف نمی‌شود و پس از بازگشت از Sleep موعد را بررسی می‌کند؛ با خروج یا قطع اتصال پاک می‌شود. قطع خودکار، قفل پایدار شبکه را آزاد نمی‌کند.
+
+خطاها و تغییر وضعیت اتصال به‌صورت پیام شناور قابل بستن نمایش داده می‌شوند؛ پیام‌های هم‌زمان در صف قرار می‌گیرند. جزئیات خطای اتصال همچنان برای بررسی و کپی در دسترس است.
+
 ### 🛠️ راه‌اندازی سورس
 
 پیش‌نیازها: ویندوز ۱۰ یا ۱۱ نسخهٔ ۶۴ بیتی، **Node.js 24 یا جدیدتر**، npm، Git و ابزار **Visual Studio Build Tools با قابلیت Desktop development with C++**. دستورها را در Developer Command Prompt اجرا کن تا `cl.exe` قابل دسترسی باشد.
@@ -266,3 +301,11 @@ This release remains **unsigned**. Code signing verifies publisher identity and 
 The generated bootstrap DNS transport now uses its own default direct dialer. An explicit `detour: direct` to an empty direct outbound was rejected during sing-box 1.14 startup even though `check` succeeded. The deprecated `independent_cache` field is removed, following the [official migration guide](https://sing-box.sagernet.org/migration/#migrate-independent-dns-cache). A runtime smoke test starts the actual generated DNS settings in both route modes, with and without a profile DNS IP. It uses a synthetic endpoint and does not claim a successful provider connection.
 
 ارجاع اضافی DNS اولیه به خروجی `direct` باعث خطای `detour to an empty direct outbound makes no sense` می‌شد. در نسخهٔ ۰٫۳ این ارجاع و گزینهٔ منسوخ `independent_cache` حذف شده‌اند. تنظیم DNS اولیه مستقیم است؛ در نسخهٔ ۰٫۴، DNS عادی فقط در حالت تمام سیستم از VPN عبور می‌کند. آزمون جدید، خود موتور را با تنظیمات DNS تولیدشده اجرا می‌کند؛ صرفا بررسی ساختار کانفیگ نیست.
+
+
+### Development validation and platform limits
+
+- **Linux / Node.js 24+:** `npm ci --ignore-scripts`, then `npm test`. Unit coverage includes import validation, routing configuration, engine lifecycle, preferences, timers, update checksums and translation parity.
+- **UI:** `npm run test:ui` uses Chromium and mocked desktop IPC. It does not validate Windows networking. Tests regenerate screenshots under `docs/screenshots`; preserve local work or run in a disposable copy.
+- **Windows:** follow the build instructions above and the pinned Windows CI workflow for native helpers, TUN/WFP routing, installer and real Electron startup.
+- **Current cloud review:** unit tests execute here. Managed Chromium blocks file-based navigation, so UI checks cannot complete in this environment. Windows installation, elevation and end-to-end updating must be validated on Windows before publishing a release.
