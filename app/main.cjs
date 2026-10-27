@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, safeStorage, Tray, Menu, nativeImage, shell, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, safeStorage, Tray, Menu, nativeImage, shell, clipboard, net:electronNet } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
@@ -15,6 +15,8 @@ const {SessionTimer}=require('./lib/session-timer.cjs');
 const sessionTimer=new SessionTimer(()=>{const task=writeQueue.then(async()=>{await engine.stop();notify();});writeQueue=task.catch(()=>{engine.update({status:'error',error:'operationFailed'});});return task;},()=>{if(data)notify();});
 const exec = promisify(execFile);
 if(process.platform==='win32')app.setAppUserModelId('org.azadi.connect');
+const {Updater}=require('./lib/updater.cjs');
+let updater;
 let window, tray, vault, engine, networkLock, data, quitting = false, writeQueue = Promise.resolve();
 const uiPath=path.join(__dirname,'../ui/index.html');
 const uiUrl=pathToFileURL(uiPath).href;
@@ -42,7 +44,7 @@ app.on('second-instance',(_,args)=>{
   if(window){window.show();window.focus();} if(args.includes('--restore-network')){queueRecovery();}
 });
 function snapshot() {
-  return { version:app.getVersion(), platform:process.platform, disconnectAt:sessionTimer.deadline,
+  return { version:app.getVersion(), platform:process.platform, disconnectAt:sessionTimer.deadline, update:updater?.state,
     profiles:data.profiles.map(p=>({id:p.id,name:p.name,protocol:p.protocol,notes:p.notes,server:p.endpoint.server || p.endpoint.peers?.[0]?.address || p.endpoint.servers?.[0]?.server || ''})),
     apps:data.apps, selectedId:data.selectedId, mode:data.mode, language:data.language, theme:data.theme || 'dark',
     killSwitch:!!data.killSwitch, networkLock:{...networkLock.state}, connection:{...engine.state}, encryption:safeStorage.isEncryptionAvailable(), coreVersion:'1.14.3' };
@@ -73,6 +75,16 @@ async function importRaw(raw,name,credentials) {
 }
 function wireHandlers() {
   handler('state',async()=>snapshot());
+  handler('update',async action=>{
+    if(process.platform!=='win32'||!app.isPackaged)throw new AppError('updatePackagedOnly');
+    if(action==='install'){
+      idle();
+      const file=await updater.verifiedFile();
+      const error=await shell.openPath(file);if(error)throw new AppError('updateFailed');
+      app.quit();return true;
+    }
+    await updater.run(action);return snapshot();
+  },true);
   handler('import-file',async(credentials)=>{
     idle(); const result=await dialog.showOpenDialog(window,{properties:['openFile'],filters:[{name:'VPN profiles',extensions:['conf','ovpn','txt']}]});
     if(result.canceled) return snapshot();
@@ -186,6 +198,7 @@ app.whenReady().then(async()=>{
     const allowed=details.url.startsWith(pathToFileURL(path.join(__dirname,'../ui/')).href) || (details.resourceType==='image' && details.url.startsWith('data:image/png;base64,'));
     callback({cancel:!allowed});
   });
+  updater=new Updater(app.getVersion(),path.join(app.getPath('userData'),'updates'),(...args)=>electronNet.fetch(...args),notify);
   wireHandlers(); await window.loadFile(uiPath);window.show();
   window.on('close',event=>{if(!quitting){event.preventDefault();window.hide();}});
   tray=new Tray(nativeImage.createFromPath(path.join(__dirname,'../ui/assets/tray.png')));tray.on('double-click',()=>window.show());updateTray();

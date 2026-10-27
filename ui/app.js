@@ -76,6 +76,10 @@ function render(){
  $('connect').disabled=busy;$('power').disabled=busy;$('connect').classList.toggle('secondary',active);$('power').setAttribute('aria-label',t(active?'disconnect':'connect'));
  $('download').textContent=formatBytes(state.connection.download);$('upload').textContent=formatBytes(state.connection.upload);$('latency').textContent=(state.connection.latency??'—')+' ms';duration();
  $('session-timer').disabled=!active; if(!state.disconnectAt)$('session-timer').value='0';
+ const update=state.update||{status:'idle'};
+ $('update-status').textContent=t('update_'+update.status)+(update.version?' · '+update.version:'')+(update.status==='downloading'?' · '+update.progress+'%':'');
+ $('update-action').textContent=t(update.status==='available'?'downloadUpdate':update.status==='ready'?'installUpdate':'checkUpdate');
+ $('update-action').disabled=['checking','downloading'].includes(update.status);
  const lock=state.networkLock||{},protectedNetwork=!!lock.active;
  $('network-lock-banner').classList.toggle('hidden',!protectedNetwork&&!lock.unknown);
  $('lock-banner-title').textContent=t(lock.unknown?'lockUnknown':lock.complete===false?'lockIncomplete':'lockArmed');
@@ -125,3 +129,5 @@ if(api){api.onState(value=>{state=value;render();});call('state');}else render()
 setInterval(duration,1000);
 
 $('session-timer').addEventListener('change',async e=>{if(await call('setTimer',Number(e.target.value)))toast(t('timerSaved'));});
+
+$('update-action').addEventListener('click',()=>{const status=state.update?.status;const action=status==='available'?'download':status==='ready'?'install':'check';if(action==='install'&&!window.confirm(t('installConfirm')))return;call('update',action);});
