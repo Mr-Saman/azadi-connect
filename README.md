@@ -34,6 +34,12 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 
 > 🤖 **This project was generated entirely with ChatGPT**, including the application code, interface design, documentation and build scripts. Independent third-party software—including sing-box, Electron and the fonts—belongs to its original authors and is credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+### 📱 Android · اندروید
+
+A native Kotlin/Compose Android app lives in [android/](android/README.md), sharing the mint/violet theme, Persian/English interface, profile imports, app routing, timers and verified update controls. Requires Android 8+ and a 64-bit device. See the Android guide for build instructions and the distinction between debug APKs and production signing.
+
+نسخهٔ بومی اندروید با همین تم و امکانات در [راهنمای اندروید](android/README.md) قرار دارد. APK فعلی برای آزمایش است؛ انتشار عمومی به امضای ثابت و آزمون روی گوشی واقعی نیاز دارد.
+
 ### ✨ New in the development branch
 
 | Feature | What you get |
