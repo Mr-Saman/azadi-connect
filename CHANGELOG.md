@@ -1,5 +1,17 @@
 # Changelog · تغییرات 🚀
 
+## 0.5.0 — Preview
+
+- Add in-app stable release checks, verified installer downloads and an explicit install action.
+- Add main-process session disconnect timers with a remaining-time display.
+- Queue floating notifications with dismiss controls and screen-reader announcements.
+- Validate preference requests before changing network protection.
+- Block profile mutations while protected and connection changes when lock status is unknown.
+- Keep disconnect and Internet recovery available during update downloads.
+- Expand the bilingual documentation and regression coverage.
+
+Windows UI, native networking and installer validation are required before publishing binaries.
+
 ## 0.4.1 — Preview
 
 - Fix WireGuard UDP6 bind/update failures for IPv4 peers using an automatic source port: use a non-empty direct transport with the core's connected UDP client bind instead of the standard dual socket bind.

@@ -1,7 +1,7 @@
 {
   "name": "azadi-connect",
   "productName": "Azadi Connect",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Bilingual Windows VPN client with application routing. For Iran ❤️",
   "author": "Saman Salehi and the Azadi Connect contributors",
   "license": "GPL-3.0-or-later",

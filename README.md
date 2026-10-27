@@ -10,7 +10,7 @@
 
 🇮🇷 **برای ایران ❤️ · For Iran ❤️**
 
-**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.4.1 Preview**
+**Windows 10/11 x64** · **فارسی / English** · **GPL-3.0-or-later** · **v0.5.0 Preview**
 
 [English guide](#english) · [راهنمای فارسی](#فارسی) · [Architecture](docs/ARCHITECTURE.md) · [Security](SECURITY.md) · [Contributing](CONTRIBUTING.md)
 
@@ -43,7 +43,7 @@ Azadi Connect brings your own VPN profiles into one desktop interface. Choose in
 | Floating notifications | Queued, dismissible success/error messages with screen-reader announcements |
 | Safer controls | Profile editing is disabled while protection is active; unknown network-lock state blocks new connections |
 
-These changes are source changes pending a new Windows release. Existing **0.4.1** installers do not gain them until a new build is installed.
+These changes target the 0.5.0 Windows release; download availability depends on the Windows build and release publication. Existing **0.4.1** installers do not gain them until a new build is installed.
 
 ### 🔄 Update without visiting GitHub
 
@@ -59,7 +59,7 @@ After connecting, open **Settings → Disconnect timer** and choose a duration. 
 
 ### 🪟 Install on Windows
 
-1. Open this repository’s **Releases** page and download `Azadi-Connect-0.4.1-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.1).
+1. Open this repository’s **Releases** page and download `Azadi-Connect-0.5.0-Windows-x64-Setup.exe` from the [latest release](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.5.0).
 2. Run the installer and accept the Windows Administrator/UAC request. The installer supports reinstall/upgrade over an existing installation and preserves your profiles. Its finish page offers **Run Azadi Connect** (checked by default) and **Show shortcut to pin to Start or taskbar**.
 3. Open **Azadi Connect → Add profile**. Import your configuration, or paste a share link.
 4. Choose **Selected applications** and add the actual `.exe` paths, or choose **Entire system**.
@@ -143,7 +143,7 @@ To create the installable Windows EXE:
 npm run build:win
 ```
 
-Output: `dist/Azadi-Connect-0.4.1-Windows-x64-Setup.exe`.
+Output: `dist/Azadi-Connect-0.5.0-Windows-x64-Setup.exe`.
 
 The download script pins **sing-box 1.14.3** and its official archive SHA-256. It never silently selects “latest.” The native guardian is compiled from the included C source, then its hash is recorded. The application rechecks both binaries before connecting. Installer branding, version information and the Administrator manifest are embedded with a JavaScript PE resource editor; Wine is not required for packaging on Linux.
 
@@ -156,7 +156,7 @@ npm run test:ui
 
 ### 🚀 Releases & development history
 
-The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs the unit and bilingual UI suites, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. A real two-peer WireGuard fixture sends encrypted traffic with physical IPv6 disabled, checks adapter rebind and rejects a wrong key. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.4.1` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
+The Windows workflow runs on pushes/PRs, manually, and when a release is published. It runs the unit and bilingual UI suites, compiles both native helpers, validates 22 generated configurations, and starts four generated DNS/mode combinations. Disposable Windows integration tests exercise actual production app-mode default routes, selected HTTPS through a synthetic upstream, unrelated HTTPS and fresh/shared/raw DNS with the lock off/on, upstream failure and core crash. A real two-peer WireGuard fixture sends encrypted traffic with physical IPv6 disabled, checks adapter rebind and rejects a wrong key. It also exercises persistent system filtering, recovery, real installation, reinstall over a running app, shortcut identity and data preservation. On a published `v0.5.0` release it uploads the EXE, SHA-256 list and pinned upstream source archive to that release. The tag must match `package.json`.
 
 The initial implementation is developed in separate commits for the protocol core, desktop UI, validation, documentation and release packaging. Release binaries are generated from the checked-out commit, not committed into Git history.
 
@@ -184,7 +184,7 @@ The initial implementation is developed in separate commits for the protocol cor
 
 ### 🪟 روش نصب و استفاده
 
-۱. از بخش **Releases** فایل `Azadi-Connect-0.4.1-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.4.1) دریافت کن.
+۱. از بخش **Releases** فایل `Azadi-Connect-0.5.0-Windows-x64-Setup.exe` را از [جدیدترین نسخه](https://github.com/Mr-Saman/azadi-connect/releases/tag/v0.5.0) دریافت کن.
 
 ۲. نصب‌کننده را اجرا کن؛ راه‌اندازی تونل به تأیید دسترسی Administrator ویندوز نیاز دارد. نصب روی نسخهٔ موجود هم پشتیبانی می‌شود. در پایان، تیک **اجرای آزادی کانکت** و گزینهٔ **نمایش میانبر برای پین به Start یا تسک‌بار** را داری.
 
