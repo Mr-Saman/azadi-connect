@@ -79,13 +79,17 @@ function wireHandlers() {
   handler('update',async action=>{
     if(process.platform!=='win32'||!app.isPackaged)throw new AppError('updatePackagedOnly');
     if(action==='install'){
-      idle();
-      const file=await updater.verifiedFile();
-      const error=await shell.openPath(file);if(error)throw new AppError('updateFailed');
-      app.quit();return true;
+      const task=writeQueue.then(async()=>{
+        idle();
+        const file=await updater.verifiedFile();
+        idle();
+        const error=await shell.openPath(file);if(error)throw new AppError('updateFailed');
+        app.quit();return true;
+      });
+      writeQueue=task.catch(()=>{});return task;
     }
     await updater.run(action);return snapshot();
-  },true);
+  });
   handler('import-file',async(credentials)=>{
     idle(); const result=await dialog.showOpenDialog(window,{properties:['openFile'],filters:[{name:'VPN profiles',extensions:['conf','ovpn','txt']}]});
     if(result.canceled) return snapshot();
