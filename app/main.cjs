@@ -16,6 +16,7 @@ const sessionTimer=new SessionTimer(()=>{const task=writeQueue.then(async()=>{aw
 const exec = promisify(execFile);
 if(process.platform==='win32')app.setAppUserModelId('org.azadi.connect');
 const {Updater}=require('./lib/updater.cjs');
+const {validatePreferences}=require('./lib/preferences.cjs');
 let updater;
 let window, tray, vault, engine, networkLock, data, quitting = false, writeQueue = Promise.resolve();
 const uiPath=path.join(__dirname,'../ui/index.html');
@@ -114,7 +115,8 @@ function wireHandlers() {
     return describeApps(filenames);
   });
   handler('preferences',async changes=>{
-    if(!changes || typeof changes!=='object')throw new AppError('operationFailed');
+    validatePreferences(changes);
+    if(changes.mode!==undefined||changes.killSwitch===true)idle();
     if(changes.killSwitch!==undefined){if(typeof changes.killSwitch!=='boolean')throw new AppError('operationFailed');if(changes.killSwitch){idle();data.killSwitch=true;}else{await restoreNetwork();}}
     if(changes.mode!==undefined){idle();if(!['apps','system'].includes(changes.mode))throw new AppError('invalidMode');data.mode=changes.mode;}
     if(changes.language!==undefined){if(!['fa','en'].includes(changes.language))throw new AppError('operationFailed');data.language=changes.language;}
