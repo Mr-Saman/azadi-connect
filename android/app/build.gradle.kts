@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "org.azadi.connect"
     compileSdk = 35
+    ndkVersion = "28.1.13356709"
     defaultConfig {
         applicationId = "org.azadi.connect"
         minSdk = 26

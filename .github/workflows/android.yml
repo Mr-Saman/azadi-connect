@@ -28,13 +28,8 @@ jobs:
         with:
           go-version: '1.25.5'
           cache: false
-      - name: Install Android SDK components
-        shell: bash
-        run: |
-          set +o pipefail
-          yes | sdkmanager --licenses >/dev/null
-          set -o pipefail
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.1.13356709"
+      - name: Install pinned Android SDK components
+        run: android/scripts/install-sdk-linux.sh
       - name: Build pinned sing-box Android library
         run: android/scripts/build-core.sh
       - name: Build APK, test importers and run Android lint

@@ -43,7 +43,7 @@ The update center shares this repository's latest stable release API. A newer Wi
 
 ## Reproducible build
 
-Prerequisites: **JDK 21**, **Go 1.25.5**, **Android SDK 35**, **Build Tools 35.0.0**, **NDK 28.1.13356709**. Android Studio can install SDK components. The checked-in wrapper pins Gradle 8.13 and its SHA-256.
+Prerequisites: **JDK 21**, **Go 1.25.5**, **Android SDK 35**, **Build Tools 35.0.0**, **NDK 28.1.13356709**. Android Studio can install SDK components. Linux CI uses the official Google archives through scripts/install-sdk-linux.sh, with pinned SHA-256 values and normal archive extraction. The checked-in wrapper pins Gradle 8.13 and its SHA-256.
 
 ~~~bash
 export ANDROID_HOME=/path/to/Android/Sdk
