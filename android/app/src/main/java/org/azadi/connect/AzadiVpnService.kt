@@ -63,7 +63,7 @@ class AzadiVpnService : VpnService() {
     private fun notification(text: String): android.app.Notification {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 1, Intent(this, AzadiVpnService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        return NotificationCompat.Builder(this, "tunnel").setSmallIcon(R.drawable.ic_azadi).setContentTitle("Azadi Connect").setContentText(text).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).addAction(0, if (fa) "قطع اتصال" else "Disconnect", stop).build()
+        return NotificationCompat.Builder(this, "tunnel").setSmallIcon(R.drawable.ic_notification).setContentTitle("Azadi Connect").setContentText(text).setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true).addAction(0, if (fa) "قطع اتصال" else "Disconnect", stop).build()
     }
     private suspend fun connect() {
         var stage = "profile"
