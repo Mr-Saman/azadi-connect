@@ -18,12 +18,16 @@ import java.util.concurrent.atomic.AtomicReference
 
 class AzadiVpnService : VpnService() {
     companion object { const val STOP = "org.azadi.connect.STOP"; const val TIMER = "org.azadi.connect.TIMER" }
+    private val guard = SessionGuard(Tunnel.owner)
+    private val workDirectory get() = File(cacheDir, "core-" + guard.id)
     private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private var server: CommandServer? = null
     private var descriptor: ParcelFileDescriptor? = null
     private var session: Job? = null
     @Volatile private var stopping = false
+    @Volatile private var timerSession = UUID.randomUUID().toString()
+    @Volatile private var latestStartId = 0
     private var profile: Profile? = null
     private var port = 0
     private var secret = ""
@@ -35,19 +39,26 @@ class AzadiVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         connectivity = getSystemService(ConnectivityManager::class.java)
+        getSystemService(AlarmManager::class.java).cancel(timerIntent())
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("tunnel", "VPN connection", NotificationManager.IMPORTANCE_LOW))
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        latestStartId = startId
         when (intent?.action) {
-            STOP -> { stopping = true; session?.cancel(); scope.launch { disconnect(); stopSelf() } }
+            STOP -> {
+                if (guard.acceptsTimer(intent.getStringExtra("timer_session"), timerSession)) {
+                    stopping = true; session?.cancel(); scope.launch { disconnect(); stopSelfResult(startId) }
+                } else if (session?.isActive != true) stopSelf()
+            }
             TIMER -> { val minutes = intent.getIntExtra("minutes", 0); if (minutes in 0..1440 && Tunnel.state.value.status == "connected") setTimer(minutes) }
             else -> {
                 startForeground(1, notification(if (fa) "در حال اتصال…" else "Connecting…"))
-                if (session?.isActive != true) { stopping = false; session = scope.launch { connect() } }
+                if (session?.isActive != true) { stopping = false; timerSession = UUID.randomUUID().toString(); session = scope.launch { connect() } }
             }
         }
         return START_NOT_STICKY
     }
+    private fun publish(state: TunnelState) { if (guard.isCurrent) Tunnel.state.value = state }
     private fun notification(text: String): android.app.Notification {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 1, Intent(this, AzadiVpnService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -61,9 +72,10 @@ class AzadiVpnService : VpnService() {
             profile = selected
             require(data.mode != "apps" || data.apps.isNotEmpty()) { "Select applications first" }
             check(prepare(this) == null) { "VPN permission is required" }
-            Tunnel.state.value = TunnelState("connecting", selected.name)
+            publish(TunnelState("connecting", selected.name))
             stage = "core"
-            val work = File(cacheDir, "core").apply { deleteRecursively(); mkdirs() }
+            cacheDir.listFiles()?.filter { it.isDirectory && (it.name == "core" || it.name.startsWith("core-")) && it != workDirectory }?.forEach { it.deleteRecursively() }
+            val work = workDirectory.apply { mkdirs() }
             secret = UUID.randomUUID().toString() + UUID.randomUUID().toString()
             Libbox.setup(SetupOptions().apply { basePath = filesDir.absolutePath; workingPath = work.absolutePath; tempPath = work.absolutePath; commandServerSecret = secret; logMaxLines = 100; appVersion = BuildConfig.VERSION_NAME; crashReportSource = "android" })
             port = ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1")).use { it.localPort }
@@ -92,7 +104,7 @@ class AzadiVpnService : VpnService() {
             check(verified != null) { "VPN outbound could not be verified" }
             currentCoroutineContext().ensureActive()
             if (stopping) return
-            Tunnel.state.value = TunnelState("connected", selected.name, SystemClock.elapsedRealtime(), latency = verified)
+            publish(TunnelState("connected", selected.name, SystemClock.elapsedRealtime(), latency = verified))
             getSystemService(NotificationManager::class.java).notify(1, notification(if (fa) "اتصال تأیید شد · ${selected.name}" else "Verified · ${selected.name}"))
             var ticks = 0; var healthFailures = 0
             while (currentCoroutineContext().isActive && !stopping) {
@@ -100,20 +112,21 @@ class AzadiVpnService : VpnService() {
                 val old = Tunnel.state.value
                 if (SessionDeadline.expired(old.deadline, SystemClock.elapsedRealtime())) { requestStop(); break }
                 val totals = runCatching { api("/connections") }.getOrNull()
-                if (totals != null) Tunnel.state.value = Tunnel.state.value.copy(upload = totals.optLong("uploadTotal"), download = totals.optLong("downloadTotal"))
+                if (totals != null) publish(Tunnel.state.value.copy(upload = totals.optLong("uploadTotal"), download = totals.optLong("downloadTotal")))
                 if (++ticks % 15 == 0) {
                     val latency = runCatching { probe("https://1.1.1.1/cdn-cgi/trace") }.getOrNull()
                     if (latency == null) healthFailures++ else healthFailures = 0
                     check(healthFailures < 2) { "VPN health check failed" }
-                    Tunnel.state.value = Tunnel.state.value.copy(latency = latency)
+                    publish(Tunnel.state.value.copy(latency = latency))
                 }
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            stopping = true
             val detail = Diagnostics.safe("stage=$stage\n" + (e.message ?: e.javaClass.simpleName).replace(secret.takeIf { it.isNotEmpty() } ?: "\u0000", "[redacted]"), profile)
             disconnect(false)
-            Tunnel.state.value = Tunnel.state.value.copy(status = "error", latency = null, deadline = 0, error = detail)
+            publish(Tunnel.state.value.copy(status = "error", latency = null, deadline = 0, error = detail))
             stopSelf()
         }
     }
@@ -126,25 +139,26 @@ class AzadiVpnService : VpnService() {
         check(d.has("delay") && d.getDouble("delay").isFinite() && d.getDouble("delay") >= 0) { "Invalid VPN probe response" }
         return d.getLong("delay")
     }
-    private fun requestStop() { stopping = true; session?.cancel(); scope.launch { disconnect(); stopSelf() } }
-    private fun timerIntent() = PendingIntent.getService(this, 2, Intent(this, AzadiVpnService::class.java).setAction(STOP), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    private fun requestStop() { if (stopping) return; stopping = true; session?.cancel(); val id = latestStartId; scope.launch { disconnect(); stopSelfResult(id) } }
+    private fun timerIntent() = PendingIntent.getService(this, 2, Intent(this, AzadiVpnService::class.java).setAction(STOP).putExtra("timer_session", timerSession), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     private fun setTimer(minutes: Int) {
         val alarm = getSystemService(AlarmManager::class.java); alarm.cancel(timerIntent())
         val deadline = SessionDeadline.fromMinutes(minutes, SystemClock.elapsedRealtime())
-        Tunnel.state.value = Tunnel.state.value.copy(deadline = deadline)
+        publish(Tunnel.state.value.copy(deadline = deadline))
         if (deadline > 0) alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, deadline, timerIntent())
     }
     private fun disconnect(reset: Boolean = true) {
-        runCatching { getSystemService(AlarmManager::class.java).cancel(timerIntent()) }
+        if (guard.isCurrent) runCatching { getSystemService(AlarmManager::class.java).cancel(timerIntent()) }
         runCatching { server?.closeService() }; runCatching { server?.close() }; server = null
         runCatching { descriptor?.close() }; descriptor = null
         callback?.let { runCatching { connectivity.unregisterNetworkCallback(it) } }; callback = null; monitor.set(null)
-        File(cacheDir, "core").deleteRecursively()
-        if (reset) Tunnel.state.value = TunnelState()
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        workDirectory.deleteRecursively()
+        if (reset) publish(TunnelState())
+        if (guard.isCurrent) stopForeground(STOP_FOREGROUND_REMOVE)
     }
     private fun underlying(): Network? = connectivity.allNetworks.filter { n -> connectivity.getNetworkCapabilities(n)?.let { it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && it.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) } == true }.sortedByDescending { connectivity.getNetworkCapabilities(it)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true }.firstOrNull()
     private fun updateNetwork() {
+        if (!guard.isCurrent) return
         val net = underlying()
         setUnderlyingNetworks(net?.let { arrayOf(it) })
         val name = net?.let { connectivity.getLinkProperties(it)?.interfaceName }.orEmpty()

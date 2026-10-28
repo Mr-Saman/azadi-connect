@@ -71,4 +71,4 @@ class AzadiApplication : Application() {
     }
 }
 data class TunnelState(val status: String = "disconnected", val profileName: String = "", val startedAt: Long = 0, val deadline: Long = 0, val upload: Long = 0, val download: Long = 0, val latency: Long? = null, val error: String = "")
-object Tunnel { val state = MutableStateFlow(TunnelState()) }
+object Tunnel { val owner = java.util.concurrent.atomic.AtomicReference(""); val state = MutableStateFlow(TunnelState()) }

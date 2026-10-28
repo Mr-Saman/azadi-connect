@@ -104,4 +104,17 @@ class ProfilesTest {
         assertFalse(SessionDeadline.expired(SessionDeadline.fromMinutes(0, 1000), 2000000))
         rejects { SessionDeadline.fromMinutes(-1, 1000) }; rejects { SessionDeadline.fromMinutes(1441, 1000) }
     }
+    @Test fun staleServiceCallbacksAndAlarmsCannotStopANewSession() {
+        val owner = java.util.concurrent.atomic.AtomicReference("")
+        val old = SessionGuard(owner, "old-session")
+        assertTrue(old.isCurrent)
+        val fresh = SessionGuard(owner, "new-session")
+        assertFalse(old.isCurrent)
+        assertFalse(old.acceptsTimer(null))
+        assertFalse(fresh.acceptsTimer(old.id))
+        assertTrue(fresh.acceptsTimer(fresh.id))
+        assertTrue(fresh.acceptsTimer(null))
+        assertFalse(fresh.acceptsTimer("old-attempt", "new-attempt"))
+        assertTrue(fresh.acceptsTimer("new-attempt", "new-attempt"))
+    }
 }
