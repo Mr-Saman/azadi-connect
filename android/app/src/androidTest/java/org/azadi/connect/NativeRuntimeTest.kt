@@ -48,6 +48,14 @@ class NativeRuntimeTest {
         val file = File(directory, "profiles.aes")
         assertFalse(String(file.readBytes(), Charsets.ISO_8859_1).contains("synthetic-secret"))
         assertEquals(p, Vault(wrapper).data.value.profiles.single())
+        val previous = Tunnel.state.value
+        try {
+            val snapshot = vault.connectionSnapshot { Tunnel.state.value = TunnelState("connecting") }
+            assertEquals(p, snapshot.profiles.single())
+            assertTrue(runCatching { vault.update { it.copy(mode = "apps") } }.isFailure)
+            vault.update { it.copy(dark = false) }
+            assertFalse(vault.data.value.dark)
+        } finally { Tunnel.state.value = previous }
         val bytes = file.readBytes(); bytes[bytes.lastIndex] = (bytes.last().toInt() xor 1).toByte(); file.writeBytes(bytes)
         assertTrue(runCatching { Vault(wrapper) }.isFailure)
         assertArrayEquals(bytes, file.readBytes())

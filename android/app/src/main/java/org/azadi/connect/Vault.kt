@@ -57,6 +57,11 @@ class Vault(context: Context) {
         try { stream.write(bytes); file.finishWrite(stream) } catch (e: Exception) { file.failWrite(stream); throw e }
         mutable.value = next
     }
+    @Synchronized fun connectionSnapshot(markConnecting: (AppData) -> Unit): AppData {
+        val current = mutable.value
+        markConnecting(current)
+        return current
+    }
     fun import(profiles: List<Profile>) = update { current ->
         check(Tunnel.state.value.status !in listOf("connecting", "connected")) { "Disconnect first" }
         current.copy(profiles = current.profiles + profiles, selectedId = current.selectedId.ifEmpty { profiles.first().id })

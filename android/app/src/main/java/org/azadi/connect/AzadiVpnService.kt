@@ -68,7 +68,11 @@ class AzadiVpnService : VpnService() {
         var stage = "profile"
         try {
             check(!(application as AzadiApplication).startupError) { "Vault is unavailable" }
-            val data = store.data.value; val selected = data.profiles.find { it.id == data.selectedId } ?: error("Select a profile first")
+            currentCoroutineContext().ensureActive()
+            val data = store.connectionSnapshot { snapshot -> publish(TunnelState("connecting", snapshot.profiles.find { it.id == snapshot.selectedId }?.name.orEmpty())) }
+            currentCoroutineContext().ensureActive()
+            check(guard.isCurrent) { "Session superseded" }
+            val selected = data.profiles.find { it.id == data.selectedId } ?: error("Select a profile first")
             profile = selected
             require(data.mode != "apps" || data.apps.isNotEmpty()) { "Select applications first" }
             check(prepare(this) == null) { "VPN permission is required" }
