@@ -300,13 +300,21 @@ private fun statusTitle(status: String, w: Words) = when (status) { "connected" 
             context.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0).map { InstalledApp(it.activityInfo.packageName, it.loadLabel(context.packageManager).toString()) }.distinctBy { it.id }.filter { it.id != context.packageName }.sortedBy { it.label.lowercase() }
         }
     }
+    val missing = if (apps == null) emptyList() else data.apps.filter { id -> apps!!.none { it.id == id } && id.contains(query, true) }
     val filtered = apps?.filter { it.label.contains(query, true) || it.id.contains(query, true) }.orEmpty()
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { ScreenTitle(w("مسیر هر برنامه، دست تو.", "Every app. Your choice."), w("برنامه‌های منتخب از تونل استفاده می‌کنند؛ بقیه مسیر عادی دارند.", "Selected apps use the tunnel. Others keep their normal route.")) }
         item { OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(w("جست‌وجوی برنامه…", "Search applications…")) }, leadingIcon = { Icon(Icons.Default.Search, null) }, shape = RoundedCornerShape(18.dp)) }
         item { Text(w("انتخاب‌شده", "Selected") + " · ${data.apps.size}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium) }
         if (apps == null) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-        if (apps != null && filtered.isEmpty()) item { EmptyCard(w("برنامه‌ای پیدا نشد.", "No matching applications."), w("نام دیگری را امتحان کن.", "Try another app name.")) }
+        items(missing, key = { "missing-" + it }) { id ->
+            Panel {
+                Text(id, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(w("خارج از فهرست فعلی برنامه‌ها؛ می‌توانی از انتخاب حذفش کنی.", "Not in the current app list. You can remove this saved selection."), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(enabled = !locked, onClick = { onToggle(id) }) { Text(w("حذف انتخاب", "Remove selection")) }
+            }
+        }
+        if (apps != null && filtered.isEmpty() && missing.isEmpty()) item { EmptyCard(w("برنامه‌ای پیدا نشد.", "No matching applications."), w("نام دیگری را امتحان کن.", "Try another app name.")) }
         items(filtered, key = { it.id }) { app ->
             Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().clickable(enabled = !locked) { onToggle(app.id) }) {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {

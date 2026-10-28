@@ -36,8 +36,13 @@ class UiRuntimeTest {
         compose.onNodeWithText("Connect").performClick()
         compose.onNodeWithText("Connect on your terms.").assertIsDisplayed()
         capture("english-light")
+        app.vault.update { it.copy(apps = it.apps + "org.azadi.example.missing") }
         compose.onNodeWithText("Apps", useUnmergedTree = false).performClick()
         compose.onNodeWithText("Every app. Your choice.").assertIsDisplayed()
+        compose.waitUntil(15000) { compose.onAllNodesWithText("Remove selection").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("org.azadi.example.missing").assertIsDisplayed()
+        compose.onNodeWithText("Remove selection").performClick()
+        compose.waitUntil(15000) { "org.azadi.example.missing" !in app.vault.data.value.apps }
         capture("applications-light")
     }
 }
