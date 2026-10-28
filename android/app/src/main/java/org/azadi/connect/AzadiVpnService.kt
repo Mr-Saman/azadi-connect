@@ -44,6 +44,7 @@ class AzadiVpnService : VpnService() {
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         latestStartId = startId
+        if ((application as AzadiApplication).startupError) { stopSelf(startId); return START_NOT_STICKY }
         when (intent?.action) {
             STOP -> {
                 if (guard.acceptsTimer(intent.getStringExtra("timer_session"), timerSession)) {
