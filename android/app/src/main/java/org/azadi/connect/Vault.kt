@@ -37,9 +37,17 @@ class Vault(context: Context) {
         }.generateKey()
     }
     private fun load(): AppData {
-        if (!file.baseFile.exists()) return AppData()
-        check(file.baseFile.length() <= 16 * 1024 * 1024 + 64) { "Vault is too large" }
-        val bytes = file.readFully(); check(bytes.size >= 29 && bytes[0] == 1.toByte()) { "Invalid vault" }
+        val bytes = try {
+            file.openRead().use { input ->
+                check(input.channel.size() <= 16 * 1024 * 1024 + 64) { "Vault is too large" }
+                input.readBytes()
+            }
+        } catch (e: java.io.FileNotFoundException) {
+            // AtomicFile must recover a legacy .bak before absence is considered a new vault.
+            if (file.baseFile.exists() || File(file.baseFile.path + ".bak").exists()) throw e
+            return AppData()
+        }
+        check(bytes.size >= 29 && bytes[0] == 1.toByte()) { "Invalid vault" }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(1, 13)))
         return AppData.from(JSONObject(String(cipher.doFinal(bytes.copyOfRange(13, bytes.size)), Charsets.UTF_8)))

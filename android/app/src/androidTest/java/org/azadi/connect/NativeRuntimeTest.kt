@@ -48,6 +48,11 @@ class NativeRuntimeTest {
         val file = File(directory, "profiles.aes")
         assertFalse(String(file.readBytes(), Charsets.ISO_8859_1).contains("synthetic-secret"))
         assertEquals(p, Vault(wrapper).data.value.profiles.single())
+        val backup = File(file.path + ".bak")
+        assertTrue(file.renameTo(backup))
+        assertEquals("Legacy interrupted writes must recover", p, Vault(wrapper).data.value.profiles.single())
+        assertTrue(file.exists())
+        assertFalse(backup.exists())
         val previous = Tunnel.state.value
         try {
             val snapshot = vault.connectionSnapshot { Tunnel.state.value = TunnelState("connecting") }
