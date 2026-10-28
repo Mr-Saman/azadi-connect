@@ -32,13 +32,19 @@ jobs:
         run: android/scripts/install-sdk-linux.sh
       - name: Cache the pinned native library
         id: core-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: android/app/libs/libbox.aar
           key: libbox-android-v1.14.3-ndk28.1-go1.25.5-${{ hashFiles('android/scripts/build-core.sh', 'android/scripts/install-sdk-linux.sh') }}
       - name: Build pinned sing-box Android library
         if: steps.core-cache.outputs.cache-hit != 'true'
         run: android/scripts/build-core.sh
+      - name: Save the verified native library before device tests
+        if: steps.core-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: android/app/libs/libbox.aar
+          key: libbox-android-v1.14.3-ndk28.1-go1.25.5-${{ hashFiles('android/scripts/build-core.sh', 'android/scripts/install-sdk-linux.sh') }}
       - name: Build APK, test importers and run Android lint
         working-directory: android
         run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug
@@ -67,10 +73,10 @@ jobs:
           ram-size: 4096M
           disable-linux-hw-accel: 'false'
           working-directory: android
-          script: |
-            set -euo pipefail
-            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.allowVpnTest=true
-            adb pull /sdcard/Android/data/org.azadi.connect/files/screenshots ../artifacts/android-screenshots
+          script: bash scripts/device-tests.sh
+      - name: Summarize actual Android device test results
+        if: always()
+        run: python3 android/scripts/report-device-tests.py
       - name: Save validation reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
