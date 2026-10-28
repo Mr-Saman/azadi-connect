@@ -117,4 +117,13 @@ class ProfilesTest {
         assertFalse(fresh.acceptsTimer("old-attempt", "new-attempt"))
         assertTrue(fresh.acceptsTimer("new-attempt", "new-attempt"))
     }
+    @Test fun aBlockedFirstHealthTargetDoesNotDisconnectAWorkingVpn() = kotlinx.coroutines.runBlocking {
+        val calls = mutableListOf<String>()
+        val latency = HealthChecks.latency { target -> calls += target; if (target == HealthChecks.targets.first()) throw java.io.IOException("Unavailable target"); 23L }
+        assertEquals(23L, latency)
+        assertEquals(2, calls.size)
+    }
+    @Test fun noSuccessfulHealthTargetNeverBecomesVerified() = kotlinx.coroutines.runBlocking {
+        assertNull(HealthChecks.latency { throw java.io.IOException("Offline") })
+    }
 }

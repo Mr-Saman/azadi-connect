@@ -100,12 +100,7 @@ class AzadiVpnService : VpnService() {
             server!!.startOrReloadService(config, OverrideOptions())
             currentCoroutineContext().ensureActive()
             stage = "verification"
-            var verified: Long? = null
-            for (target in listOf("https://1.1.1.1/cdn-cgi/trace", "https://www.gstatic.com/generate_204")) {
-                currentCoroutineContext().ensureActive()
-                verified = runCatching { probe(target) }.getOrNull()
-                if (verified != null) break
-            }
+            val verified = HealthChecks.latency(::probe)
             check(verified != null) { "VPN outbound could not be verified" }
             currentCoroutineContext().ensureActive()
             if (stopping) return
@@ -119,7 +114,7 @@ class AzadiVpnService : VpnService() {
                 val totals = runCatching { api("/connections") }.getOrNull()
                 if (totals != null) publish(Tunnel.state.value.copy(upload = totals.optLong("uploadTotal"), download = totals.optLong("downloadTotal")))
                 if (++ticks % 15 == 0) {
-                    val latency = runCatching { probe("https://1.1.1.1/cdn-cgi/trace") }.getOrNull()
+                    val latency = HealthChecks.latency(::probe)
                     if (latency == null) healthFailures++ else healthFailures = 0
                     check(healthFailures < 2) { "VPN health check failed" }
                     publish(Tunnel.state.value.copy(latency = latency))
