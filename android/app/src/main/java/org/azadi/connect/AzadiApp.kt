@@ -86,6 +86,7 @@ data class InstalledApp(val id: String, val label: String)
         val style = if (data.dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT) else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
         (context as? ComponentActivity)?.enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     }
+    LaunchedEffect(updater) { delay(15000); runCatching { updater.check() } }
     LaunchedEffect(Unit) { messages.collect { snack.showSnackbar(it, withDismissAction = true) } }
     var previous by remember { mutableStateOf("disconnected") }
     LaunchedEffect(tunnel.status) {
