@@ -60,7 +60,14 @@ The core script pins **sing-box 1.14.3** to commit **7054cac5124465ffdb145870d7c
 
 Behind an HTTPS proxy, configure Java/Gradle proxy properties and trust the organization's CA through a task-local truststore. Keep TLS, Gradle checksum and Go module verification enabled.
 
-The Android workflow builds the same library, runs tests/lint and uploads a debug APK plus checksum. It does not publish an Android production release.
+The Android workflow builds the same library, runs unit tests/lint, uploads a debug APK plus checksum, then runs Android 15 device tests using an isolated KVM emulator. Device tests check the real native configuration parser, Keystore tamper detection, failed-endpoint behavior and bilingual UI. Screenshots and test reports are saved as separate artifacts. It does not publish an Android production release.
+
+To run device tests on an isolated emulator:
+~~~bash
+cd android
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.allowVpnTest=true
+~~~
+The allowVpnTest flag explicitly permits the negative VPN test to change the emulator's VPN. Without it that test is skipped. Do not run this network-changing test on your everyday phone.
 
 ## Tests and practical limits
 

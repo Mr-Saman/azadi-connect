@@ -30,11 +30,18 @@ jobs:
           cache: false
       - name: Install pinned Android SDK components
         run: android/scripts/install-sdk-linux.sh
+      - name: Cache the pinned native library
+        id: core-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: android/app/libs/libbox.aar
+          key: libbox-android-v1.14.3-ndk28.1-go1.25.5-${{ hashFiles('android/scripts/build-core.sh', 'android/scripts/install-sdk-linux.sh') }}
       - name: Build pinned sing-box Android library
+        if: steps.core-cache.outputs.cache-hit != 'true'
         run: android/scripts/build-core.sh
       - name: Build APK, test importers and run Android lint
         working-directory: android
-        run: ./gradlew --no-daemon :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug
       - name: Stage test APK and checksums
         run: |
           mkdir -p artifacts/android
@@ -46,6 +53,24 @@ jobs:
           name: Azadi-Connect-Android-debug
           path: artifacts/android/*
           if-no-files-found: error
+      - name: Enable isolated emulator hardware acceleration
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Run Android 15 device tests
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: '35'
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          ram-size: 4096M
+          disable-linux-hw-accel: 'false'
+          working-directory: android
+          script: |
+            set -euo pipefail
+            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.allowVpnTest=true
+            adb pull /sdcard/Android/data/org.azadi.connect/files/screenshots ../artifacts/android-screenshots
       - name: Save validation reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -54,4 +79,7 @@ jobs:
           path: |
             android/app/build/reports/tests/
             android/app/build/reports/lint-results-debug.*
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+            artifacts/android-screenshots/
           if-no-files-found: ignore
